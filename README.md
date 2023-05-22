@@ -54,3 +54,5 @@ When the
 
 This project uses https://learn.microsoft.com/en-us/windows/uwp/winrt-components/raising-events-in-windows-runtime-components
 to generate custom proxy stub DLLs between the processes. See also [this sample](https://github.com/microsoft/Windows-universal-samples/blob/ad9a0c4def222aaf044e51f8ee0939911cb58471/Samples/ProxyStubsForWinRTComponents/cpp/Server/ProxyStubsForWinRTComponents_server.vcxproj) for a complete description
+
+See also this - https://github.com/microsoft/cppwinrt/pull/1290/files
