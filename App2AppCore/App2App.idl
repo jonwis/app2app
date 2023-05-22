@@ -1,9 +1,18 @@
 namespace App2App
 {
+	enum App2AppCallResultStatus
+	{
+		Completed,
+		TimedOut,
+		Failed
+	};
+
 	runtimeclass App2AppCallResult
 	{
-		App2AppCallResult(HRESULT error, Object result);
+		App2AppCallResult(App2AppCallResultStatus status, HRESULT error, Object result);
 
+		App2AppCallResultStatus Status{ get; };
+		HRESULT ExtendedError{ get; };
 		Object Result{ get; };
 	}
 
