@@ -1,0 +1,23 @@
+namespace App2App
+{
+	runtimeclass App2AppCallResult
+	{
+		App2AppCallResult(HRESULT error, Object result);
+
+		Object Result{ get; };
+	}
+
+	[uuid(ca8bb1c3-ed90-422a-90c0-d955ec8cc171)]
+	interface IApp2AppConnection
+	{
+		Windows.Foundation.IAsyncOperation<App2AppCallResult> InvokeAsync(Windows.Foundation.Collections.IPropertySet args);
+		void Close();
+
+		event Windows.Foundation.TypedEventHandler<IApp2AppConnection, Object> Closed;
+	};
+
+	runtimeclass App2AppConnection
+	{
+		static IApp2AppConnection Connect(String packageFamilyName, String service);
+	}
+}
