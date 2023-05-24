@@ -8,6 +8,8 @@ namespace winrt::App2App::implementation
         App2AppConnection() = default;
 
         static winrt::App2App::IApp2AppConnection Connect(hstring const& packageFamilyName, hstring const& service);
+        static winrt::com_array<winrt::Windows::ApplicationModel::Package> GetPackagesWithService(hstring const& service);
+        static winrt::App2App::IApp2AppConnection ConnectToService(hstring const& service);
     };
 }
 namespace winrt::App2App::factory_implementation

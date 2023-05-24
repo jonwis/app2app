@@ -1,9 +1,11 @@
 #include "pch.h"
 #include "App2AppConnection.h"
 #include "App2AppConnection.g.cpp"
+#include "ConnectionProxy.h"
 
 namespace winrt
 {
+    using namespace Windows::ApplicationModel;
     using namespace Windows::ApplicationModel::AppExtensions;
     using namespace Windows::Management::Deployment;
     using namespace Windows::Foundation;
@@ -12,6 +14,20 @@ namespace winrt
 
 namespace winrt::App2App::implementation
 {
+    std::optional<winrt::guid> FindClassIdInExtension(IPropertySet const& props)
+    {
+        if (auto activation = props.TryLookup(L"Activation").try_as<IPropertySet>())
+        {
+            if (auto cid = activation.TryLookup(L"ClassId").try_as<IPropertyValue>())
+            {
+                return winrt::guid{ cid.GetString() };
+            }
+        }
+
+        return std::nullopt;
+    }
+
+
     std::optional<winrt::guid> FindClassId(hstring const& packageFamilyName, hstring const& service)
     {
         auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
@@ -19,14 +35,9 @@ namespace winrt::App2App::implementation
         {
             if ((service == c.Id()) && (c.Package().Id().FamilyName() == packageFamilyName))
             {
-                auto props = c.GetExtensionPropertiesAsync().get();
-
-                if (auto activation = props.TryLookup(L"Activation").try_as<IPropertySet>())
+                if (auto found = FindClassIdInExtension(c.GetExtensionPropertiesAsync().get()))
                 {
-                    if (auto cid = activation.TryLookup(L"ClassId").try_as<IPropertyValue>())
-                    {
-                        return winrt::guid{ cid.GetString() };
-                    }
+                    return found;
                 }
             }
         }
@@ -34,61 +45,54 @@ namespace winrt::App2App::implementation
         return std::nullopt;
     }
 
-    struct connection_proxy : winrt::implements<connection_proxy, IApp2AppConnection>
+    com_array<Package> App2AppConnection::GetPackagesWithService(hstring const& service)
     {
-        IApp2AppConnection m_connection;
-
-        IAsyncOperation<App2AppCallResult> InvokeAsync(IPropertySet args)
+        std::vector<Package> results;
+        auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
+        for (auto&& c : catalog.FindAllAsync().get())
         {
-            auto cancel = co_await winrt::get_cancellation_token();
-            cancel.enable_propagation();
-
-            try
+            if (service == c.Id())
             {
-                co_return co_await m_connection.InvokeAsync(args);
-            }
-            catch (winrt::hresult_error const& err)
-            {
-                co_return App2App::App2AppCallResult{ App2AppCallResultStatus::Failed, err.code(), nullptr};
+                results.emplace_back(c.Package());
             }
         }
+        return com_array<Package>(std::move(results));
+    }
 
-        void Close()
+    App2App::IApp2AppConnection App2AppConnection::ConnectToService(hstring const& service)
+    {
+        Package matching{ nullptr };
+
+        auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
+        std::optional<winrt::guid> foundClass;
+        for (auto&& c : catalog.FindAllAsync().get())
         {
-            m_connection.Close();
+            if (service == c.Id())
+            {
+                if (foundClass = FindClassIdInExtension(c.GetExtensionPropertiesAsync().get()))
+                {
+                    break;
+                }
+            }
         }
 
-        auto Closed(TypedEventHandler<IApp2AppConnection, IInspectable> const& e)
+        if (foundClass)
         {
-            return m_closing.add(e);
+            return connection_proxy::try_connect(foundClass.value());
         }
-
-        auto Closed(winrt::event_token const& t)
+        else
         {
-            return m_closing.remove(t);
+            return nullptr;
         }
-
-        winrt::event<TypedEventHandler<IApp2AppConnection, IInspectable>> m_closing;
-    };
+    }
 
     winrt::App2App::IApp2AppConnection App2AppConnection::Connect(hstring const& packageFamilyName, hstring const& service)
     {
-        auto clsid = FindClassId(packageFamilyName, service);
-
-        if (!clsid)
+        if (auto clsid = FindClassId(packageFamilyName, service))
         {
-            // Probably should log something here
-            return nullptr;
+            return connection_proxy::try_connect(clsid.value());
         }
-
-        // Make the connection
-        try
-        {
-            auto proxy = winrt::make_self<connection_proxy>();
-            proxy->m_connection = winrt::try_create_instance<IApp2AppConnection>(clsid.value(), CLSCTX_LOCAL_SERVER);
-            return *proxy;
-        }
-        catch (...)
+        else
         {
             return nullptr;
         }

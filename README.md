@@ -23,30 +23,36 @@ markup to their manifest based on the [windows.appExtension](https://learn.micro
 system. An example is below:
 
 ```xml
-<uap3:Extension Category="windows.appExtension">
-    <uap3:AppExtension Name="com.microsoft.windows.launchforsession"
-                        Id="app"
-                        DisplayName="anything"
-                        Description="anything"
-                        PublicFolder="Public">
-        <uap3:Properties>
-            <Activation>
-                <ClassId>587fc84c-xxxx-xxxx-xxxx-ff693f176f95</ClassId>
-            </Activation>
-        </uap3:Properties>
-    </uap3:AppExtension>
-</uap3:Extension>
+<Application ...>
+    <Extensions>
+        <uap3:Extension Category="windows.appExtension">
+            <uap3:AppExtension Name="com.microsoft.windows.app2app"
+                                Id="app"
+                                DisplayName="anything"
+                                Description="anything"
+                                PublicFolder="Public">
+                <uap3:Properties>
+                    <Activation>
+                        <ClassId>587fc84c-xxxx-xxxx-xxxx-ff693f176f95</ClassId>
+                    </Activation>
+                </uap3:Properties>
+            </uap3:AppExtension>
+        </uap3:Extension>
 ```
 
 In this chunk the `/Properties/Activation/ClassId` indicates an out-of-process COM object that
-implements the `IApp2AppConnection` interface.
+implements the `IApp2AppConnection` interface. See below for how it connects to activation.
 
 Discovery uses the `Open` method of [AppExtensionCatalog](https://learn.microsoft.com/en-us/uwp/api/windows.applicationmodel.appextensions.appextensioncatalog?view=winrt-22621)
 to find and connect to a target app.
 
 ## Activation
 
-When the 
+Packaged apps include an out-of-process COM server to invoke the app. For instance, add the following
+to per the above registration:
+
+
+
 
 ## 
 

@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:ps="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap uap3 ps">
+
+	<Identity
+	  Name="d872f889-37ec-472d-b11c-8b6d216b07f2"
+	  Publisher="CN=jonwis"
+	  Version="1.0.0.0" />
+
+	<mp:PhoneIdentity PhoneProductId="d872f889-37ec-472d-b11c-8b6d216b07f2" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
+	<Properties>
+		<DisplayName>PluginApp1</DisplayName>
+		<PublisherDisplayName>jonwis</PublisherDisplayName>
+		<Logo>Assets\StoreLogo.png</Logo>
+	</Properties>
+
+	<Dependencies>
+		<TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+		<TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+	</Dependencies>
+
+	<Resources>
+		<Resource Language="x-generate"/>
+	</Resources>
+
+	<Applications>
+		<Application Id="App"
+		  Executable="$targetnametoken$.exe"
+		  EntryPoint="$targetentrypoint$">
+			<uap:VisualElements
+			  DisplayName="PluginApp1"
+			  Description="PluginApp1"
+			  BackgroundColor="transparent"
+			  Square150x150Logo="Assets\Square150x150Logo.png"
+			  Square44x44Logo="Assets\Square44x44Logo.png">
+				<uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+				<uap:SplashScreen Image="Assets\SplashScreen.png" />
+			</uap:VisualElements>
+			<Extensions>
+				<uap3:Extension Category="windows.appExtension">
+					<uap3:AppExtension Name="com.microsoft.windows.launchforsession"
+										Id="geolocation"
+										DisplayName="Gets current system geolocation"
+										Description="Gets current system geolocation"
+										PublicFolder="Public">
+						<uap3:Properties>
+							<Activation>
+								<ClassId>d69e1d12-c655-4378-80e1-48a9d649c35a</ClassId>
+							</Activation>
+						</uap3:Properties>
+					</uap3:AppExtension>
+				</uap3:Extension>
+				<com:Extension Category="windows.comServer">
+					<com:ComServer>
+						<com:ExeServer Executable="$targetnametoken$.exe" DisplayName="PluginApp1">
+							<com:Class Id="d69e1d12-c655-4378-80e1-48a9d649c35a"/>
+						</com:ExeServer>
+					</com:ComServer>
+				</com:Extension>
+			</Extensions>
+		</Application>
+	</Applications>
+
+	<Extensions>
+		<!-- This registers the interfaces for the App2App component IPC -->
+		<ps:Extension Category="windows.activatableClass.proxyStub">
+			<ps:ProxyStub ClassId="62f72108-8b59-4f95-8117-ab30bf2a793f">
+				<Path>App2AppCore.dll</Path>
+				<Interface Name="IApp2AppConnection" InterfaceId="ca8bb1c3-ed90-422a-90c0-d955ec8cc171"/>
+				<Interface Name="IApp2AppCallResult" InterfaceId="5e259ea2-2a57-431f-a343-7ead953c5b34"/>
+				<Interface Name="EventHandler1" InterfaceId="7aa93621-ac79-5878-835b-a5432dd87761"/>
+				<Interface Name="AsyncCompletionHandler" InterfaceId="88b7a89b-7294-5b16-a5df-89559900b295"/>
+				<Interface Name="CompletionHandler2" InterfaceId="bcc812d7-2625-5e43-a5da-c1bc8e76143d"/>
+			</ps:ProxyStub>
+		</ps:Extension>
+	</Extensions>
+
+	<Capabilities>
+		<rescap:Capability Name="runFullTrust" />
+	</Capabilities>
+</Package>
