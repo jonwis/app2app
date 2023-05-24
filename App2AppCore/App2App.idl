@@ -1,3 +1,5 @@
+import "Windows.Foundation.idl";
+
 namespace App2App
 {
 	enum App2AppCallResultStatus
