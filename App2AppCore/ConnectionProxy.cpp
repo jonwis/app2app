@@ -25,7 +25,7 @@ namespace winrt
 
     App2App::IApp2AppConnection connection_proxy::try_connect(winrt::guid const& id)
     {
-        if (auto conn = winrt::try_create_instance<App2App::IApp2AppConnection>(id))
+        if (auto conn = winrt::try_create_instance<App2App::IApp2AppConnection>(id, CLSCTX_LOCAL_SERVER))
         {
             auto proxy = winrt::make_self<connection_proxy>();
             proxy->m_connection = conn;
