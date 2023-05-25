@@ -2,6 +2,7 @@
 #include "App2AppConnection.h"
 #include "App2AppConnection.g.cpp"
 #include "ConnectionProxy.h"
+#include "wil/resource.h"
 
 namespace winrt
 {
@@ -18,9 +19,15 @@ namespace winrt::App2App::implementation
     {
         if (auto activation = props.TryLookup(L"Activation").try_as<IPropertySet>())
         {
-            if (auto cid = activation.TryLookup(L"ClassId").try_as<IPropertyValue>())
+            if (auto cid = activation.TryLookup(L"ClassId").try_as<IPropertySet>())
             {
-                return winrt::guid{ cid.GetString() };
+                if (auto val = cid.TryLookup(L"#text").try_as<IPropertyValue>())
+                {
+                    if (val.Type() == PropertyType::String)
+                    {
+                        return winrt::guid{val.GetString() };
+                    }
+                }
             }
         }
 

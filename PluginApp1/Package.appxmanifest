@@ -46,7 +46,7 @@
 			</uap:VisualElements>
 			<Extensions>
 				<uap3:Extension Category="windows.appExtension">
-					<uap3:AppExtension Name="com.microsoft.windows.launchforsession"
+					<uap3:AppExtension Name="com.microsoft.windows.app2app"
 										Id="geolocation"
 										DisplayName="Gets current system geolocation"
 										Description="Gets current system geolocation"
