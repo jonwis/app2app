@@ -14,6 +14,25 @@ the system is called a "client" or "caller".
 Layered on top of that is a "web request like" model on both ends, generating a request on one end
 and producing a response on the other.
 
+# Components
+
+This system is built in three parts:
+
+* Discovery of plugins via AppExtension in packaged manifests
+* Activation of plugins via COM's `CoCreate` and cross-process mechanisms
+* Invocation of plugin via IDispatch with a single parameter in and single parameter out
+
+On top of this, the `App2AppCore.dll` provides some semantic sugar:
+
+* An `IApp2AppConnection` channel that sends/recieves a `IPropertySet` asynchronously
+* An `IApp2AppHttpConnection` channel that sends `Windows.Web.Http.HttpRequestMessage`
+  and recieves `Windows.Web.Http.HttpResponseMessage`
+
+Note that you don't actually _need_ `app2appcore.dll` - all it provides is a nicer wrapper over the
+`AppExtension` type to identify services, and adapters to make working with `IDispatch` nicer for
+modern code.  The `RawCaller` and `RawClient` project shows how to do this all-in-one without any
+code from `App2AppCore.dll`.
+
 # How to Experiment
 
 You can build this solution yourself and see how it works.  You'll need VS2022 installed, along with the
@@ -22,10 +41,16 @@ VC++ tools for Windows Desktop development.
 1. Build the solution for your favorite architecture
 2. Right-click and "deploy" the `PluginApp1` and `PluginCaller2` projects
 3. Launch `PluginCaller2`
-4. Click the shiny "Click me!" button
+4. Click one of the buttons and observe the output in the text box
 
 The PluginApp1 (the "host") will launch and interact with PluginCaller. Currently, that interaction is
 invisible, but can be observed by debugging PluginCaller2 and its `myButton_OnClick` handler.
+
+> **Note:** If you get a "Failed to deploy" error with no other information, you're probably hitting
+> a known issue in the single-project packaging model. Open the `.vcxproj` using "Open With > XML Editor"
+> on the project that failed to deploy and modify it. Add a blank line somewhere in the middle of
+> the XML content.  Save and close it, reload the project, then rebuild the solution.
+> Deploy should just work.
 
 # Coming Soon
 
@@ -114,13 +139,21 @@ on that. The `Connect` method wraps the raw `IDispatch` in a convenience layer, 
 caller then just calls `InvokeAsync` with a property set and gets a response result object back containing
 another property set.
 
+See also the `App2App.App2AppConnection.ConnectHttp` which provides a channel that takes in `Windows.Web.Http.HttpRequestMessage`
+and produces `Windows.Web.Http.HttpResponseMessage`.  This lets an app "be like" a web connection,
+processing messages using whatever normal HTTP client code they have.
+
 ## Implementing a Host
 
-Host class objects are expected to implement IDispatch. The `IApp2AppConnection` is a convenience wrapper around
+Host class objects are expected to implement `IDispatch`.  Host classes generally provide two named methods,
+one usually called `invoke` and one called `close`.  The `invoke` method takes some information and returns
+a result value.  The `close` method lets the caller positively disconnect from the host, and the host is
+free to drop any state or information. (Calls to `invoke` after `close` should return an error.)
+
+The `IApp2AppConnection` is a convenience wrapper around
 their object.
 
 The `App2AppCore` component provides multiple simplifications that bind `IDispatch` to certain types.
-
 
 # Appendix / Notes
 
