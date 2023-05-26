@@ -35,10 +35,6 @@ A short list of "to do" items
 provide an app2app connection. Some apps will want to enumerate them and dig through other configuration
 data about them.
 
-**HttpRequestMessage** - HTTP request/response is a slightly more structured system than `IPropertySet`.
-App2App endpoints that understand HTTP request/response, or have a way to map a request into an HTTP-
-like model of (verb, URI, headers, body) can use that instead.
-
 **Mapping between endpoint types** - If a caller talks PropertySet but the host talks HttpRequestMessage,
 should there be a mapping betweent the two?
 

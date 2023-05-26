@@ -21,15 +21,33 @@ IFACEMETHODIMP httpconn_adapter::GetTypeInfo(UINT, LCID, ITypeInfo** ppTInfo) no
     return E_NOTIMPL;
 }
 
+const DISPID did_invokehttp = 1;
+const DISPID did_close = 2;
+
 // There's only one method that matters, "invoke"
 IFACEMETHODIMP httpconn_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID, DISPID* rgDispId) noexcept
 {
-    if ((riid != IID_NULL) || (cNames != 1) || (L"invokehttp"sv != rgszNames[0]))
+    if (riid != IID_NULL)
     {
         return E_NOTIMPL;
     }
 
-    rgDispId[0] = 1;
+    for (uint32_t i = 0; i < cNames; ++i)
+    {
+        if (L"invokehttp"sv == rgszNames[i])
+        {
+            rgDispId[i] = did_invokehttp;
+        }
+        else if (L"close"sv == rgszNames[i])
+        {
+            rgDispId[i] = did_close;
+        }
+        else
+        {
+            rgDispId[i] = {};
+        }
+    }
+
     return S_OK;
 }
 
@@ -41,7 +59,7 @@ IFACEMETHODIMP httpconn_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames,
 IFACEMETHODIMP httpconn_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, UINT* puArgErr) noexcept
 {
     // Be strict about what we allow here for now
-    if ((dispIdMember != 1) || (riid != IID_NULL) || (wFlags != DISPATCH_METHOD) ||
+    if ((riid != IID_NULL) || (wFlags != DISPATCH_METHOD) ||
         !pDispParams || (pDispParams->cArgs != 1) || (pDispParams->rgvarg[0].vt != VT_UNKNOWN) ||
         !pVarResult)
     {
@@ -54,17 +72,33 @@ IFACEMETHODIMP httpconn_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, 
 
     try
     {
-        // Convert the incoming arguments back to an IPropertySet, then pass that along to InvokeAsync.
-        // Note that here InvokeAsync could really be async, but IDispatch::Invoke is synchronous, so
-        // the call waits for completion.
-        auto response = m_conn.InvokeAsync(to_winrt<HttpRequestMessage>(pDispParams->rgvarg[0].punkVal)).get();
+        if (dispIdMember == did_invokehttp)
+        {
+            if (!m_conn)
+            {
+                return E_UNEXPECTED;
+            }
 
-        // When the call completes, send the unknown response back to the caller if IDispatch::Invoke
-        // as the one output parameter type. IApp2AppHttpConnection returns an HttpResponseMessage,
-        // so send out a reference to that via a VT_UNKNOWN variant type.
-        pVarResult->vt = VT_UNKNOWN;
-        winrt::copy_to_abi(response, reinterpret_cast<void*&>(pVarResult->punkVal));
-        return S_OK;
+            // Convert the incoming arguments back to an IPropertySet, then pass that along to InvokeAsync.
+            // Note that here InvokeAsync could really be async, but IDispatch::Invoke is synchronous, so
+            // the call waits for completion.
+            auto response = m_conn.InvokeAsync(to_winrt<HttpRequestMessage>(pDispParams->rgvarg[0].punkVal)).get();
+
+            // When the call completes, send the unknown response back to the caller if IDispatch::Invoke
+            // as the one output parameter type. IApp2AppHttpConnection returns an HttpResponseMessage,
+            // so send out a reference to that via a VT_UNKNOWN variant type.
+            pVarResult->vt = VT_UNKNOWN;
+            winrt::copy_to_abi(response, reinterpret_cast<void*&>(pVarResult->punkVal));
+            return S_OK;
+        }
+        else if (dispIdMember == did_close)
+        {
+            if (m_conn)
+            {
+                m_conn.Close();
+                m_conn = nullptr;
+            }
+        }
     }
     catch (winrt::hresult_error const& hr)
     {

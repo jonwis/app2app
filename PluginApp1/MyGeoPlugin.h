@@ -13,10 +13,5 @@ struct MyGeoplugin : winrt::implements<MyGeoplugin, winrt::App2App::IApp2AppConn
 
     void Close();
 
-    winrt::event_token Closed(winrt::Windows::Foundation::TypedEventHandler<winrt::App2App::IApp2AppConnection, IInspectable> const& e);
-    void Closed(winrt::event_token const& t);
-
-    winrt::event<winrt::Windows::Foundation::TypedEventHandler<winrt::App2App::IApp2AppConnection, winrt::Windows::Foundation::IInspectable>> m_closing;
-
     static void Register();
 };

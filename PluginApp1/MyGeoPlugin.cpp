@@ -47,20 +47,9 @@ void MyGeoplugin::Register()
 }
 
 /*
-* Raises an event when the client side issues a close call. Not currently super interesting.
+* Disconnect or drop any information being held on to here; the remote side issued a specific
+* close request.
 */
 void MyGeoplugin::Close()
 {
-    m_closing(*this, nullptr);
 }
-
-winrt::event_token MyGeoplugin::Closed(TypedEventHandler<IApp2AppConnection, IInspectable> const& e)
-{
-    return m_closing.add(e);
-}
-
-void MyGeoplugin::Closed(winrt::event_token const& t)
-{
-    return m_closing.remove(t);
-}
-

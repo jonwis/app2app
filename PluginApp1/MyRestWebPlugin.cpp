@@ -89,6 +89,10 @@ IAsyncOperation<HttpResponseMessage> MyRestWebPlugin::InvokeAsync(HttpRequestMes
     co_return resp;
 }
 
+void MyRestWebPlugin::Close()
+{
+}
+
 void MyRestWebPlugin::Register()
 {
     App2App::App2AppConnection::RegisterHttpHost(

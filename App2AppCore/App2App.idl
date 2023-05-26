@@ -23,11 +23,13 @@ namespace App2App
 	interface IApp2AppConnection
 	{
 		Windows.Foundation.IAsyncOperation<App2AppCallResult> InvokeAsync(Windows.Foundation.Collections.IPropertySet args);
+		void Close();
 	};
 
 	interface IApp2AppHttpConnection
 	{
 		Windows.Foundation.IAsyncOperation<Windows.Web.Http.HttpResponseMessage> InvokeAsync(Windows.Web.Http.HttpRequestMessage message);
+		void Close();
 	};
 
 	delegate IApp2AppConnection App2AppConnectionHostFactory();

@@ -14,6 +14,6 @@ namespace winrt
 
     private:
         winrt::com_ptr<IDispatch> m_connection;
-        DISPID m_mainId{};
+        DISPID m_members[2]{};
     };
 }
