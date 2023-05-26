@@ -98,6 +98,11 @@ IFACEMETHODIMP httpconn_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, 
                 m_conn.Close();
                 m_conn = nullptr;
             }
+            return S_OK;
+        }
+        else
+        {
+            return E_INVALIDARG;
         }
     }
     catch (winrt::hresult_error const& hr)

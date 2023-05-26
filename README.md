@@ -30,8 +30,8 @@ On top of this, the `App2AppCore.dll` provides some semantic sugar:
 
 Note that you don't actually _need_ `app2appcore.dll` - all it provides is a nicer wrapper over the
 `AppExtension` type to identify services, and adapters to make working with `IDispatch` nicer for
-modern code.  The `RawCaller` and `RawClient` project shows how to do this all-in-one without any
-code from `App2AppCore.dll`.
+modern code.  The `SimpleAbiCaller` and `SimpleAbiHost` project shows how to do this all-in-one
+without any code from `App2AppCore.dll`.
 
 # How to Experiment
 
@@ -51,35 +51,6 @@ invisible, but can be observed by debugging PluginCaller2 and its `myButton_OnCl
 > on the project that failed to deploy and modify it. Add a blank line somewhere in the middle of
 > the XML content.  Save and close it, reload the project, then rebuild the solution.
 > Deploy should just work.
-
-# Coming Soon
-
-A short list of "to do" items
-
-**Enumerate available hosts** - Currently, the only supported operation is to identify packages that
-provide an app2app connection. Some apps will want to enumerate them and dig through other configuration
-data about them.
-
-**Mapping between endpoint types** - If a caller talks PropertySet but the host talks HttpRequestMessage,
-should there be a mapping betweent the two?
-
-**Simplified registration** - Since the manifest has all the registration information in it, a single
-method can register all the types. The connection manager can use "regular" WinRT type activation to
-bring up an object.
-
-**Method-calls** - Some app2app hosts might have a flat DLL with a single call export. Make it easier
-to provide that level of binding.
-
-**Sync or not?** - WinRT API design has moved away from "`-Async` all the things". Does the connection
-pipe have to be async, or should it be synchronous? Apps already know how to deal with blocking background
-calls on their main threads.  Hosts already know how to deal with routing calls from an apartment to
-their main thread.
-
-**GUI debugger** - Upgrade PluginCaller2 to be better; more tools to enumerate then call then visualize
-the bodies of calls; more ability to take parameters to pass along, etc.
-
-**Helpers for hosts** - APIs in App2AppCore that let hosts strongly identify who their callers are,
-along with other systems to ask questions of the caller during the connect phase.
 
 # Layers
 
@@ -154,6 +125,35 @@ The `IApp2AppConnection` is a convenience wrapper around
 their object.
 
 The `App2AppCore` component provides multiple simplifications that bind `IDispatch` to certain types.
+
+# Coming Soon
+
+A short list of "to do" items
+
+**Enumerate available hosts** - Currently, the only supported operation is to identify packages that
+provide an app2app connection. Some apps will want to enumerate them and dig through other configuration
+data about them.
+
+**Mapping between endpoint types** - If a caller talks PropertySet but the host talks HttpRequestMessage,
+should there be a mapping betweent the two?
+
+**Simplified registration** - Since the manifest has all the registration information in it, a single
+method can register all the types. The connection manager can use "regular" WinRT type activation to
+bring up an object.
+
+**Method-calls** - Some app2app hosts might have a flat DLL with a single call export. Make it easier
+to provide that level of binding.
+
+**Sync or not?** - WinRT API design has moved away from "`-Async` all the things". Does the connection
+pipe have to be async, or should it be synchronous? Apps already know how to deal with blocking background
+calls on their main threads.  Hosts already know how to deal with routing calls from an apartment to
+their main thread.
+
+**GUI debugger** - Upgrade PluginCaller2 to be better; more tools to enumerate then call then visualize
+the bodies of calls; more ability to take parameters to pass along, etc.
+
+**Helpers for hosts** - APIs in App2AppCore that let hosts strongly identify who their callers are,
+along with other systems to ask questions of the caller during the connect phase.
 
 # Appendix / Notes
 

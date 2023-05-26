@@ -33,17 +33,17 @@ IFACEMETHODIMP app2appconnection_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* r
 
     for (uint32_t i = 0; i < cNames; ++i)
     {
-        if (L"invoke"sv == rgszNames[0])
+        if (L"invoke"sv == rgszNames[i])
         {
             rgDispId[i] = did_invoke;
         }
-        else if (L"close"sv == rgszNames[1])
+        else if (L"close"sv == rgszNames[i])
         {
             rgDispId[i] = did_close;
         }
         else
         {
-            rgDispId[i] = 0;
+            rgDispId[i] = {};
         }
     }
 
@@ -58,9 +58,7 @@ IFACEMETHODIMP app2appconnection_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* r
 IFACEMETHODIMP app2appconnection_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, UINT* puArgErr) noexcept
 {
     // Be strict about what we allow here for now
-    if ((riid != IID_NULL) || (wFlags != DISPATCH_METHOD) ||
-        !pDispParams || (pDispParams->cArgs != 1) || (pDispParams->rgvarg[0].vt != VT_UNKNOWN) ||
-        !pVarResult)
+    if ((riid != IID_NULL) || (wFlags != DISPATCH_METHOD))
     {
         return E_INVALIDARG;
     }
@@ -73,7 +71,9 @@ IFACEMETHODIMP app2appconnection_adapter::Invoke(DISPID dispIdMember, REFIID rii
     {
         if (dispIdMember == did_invoke)
         {
-            if (!m_conn)
+            if (!pDispParams || (pDispParams->cArgs != 1) || (pDispParams->rgvarg[0].vt != VT_UNKNOWN) ||
+                !pVarResult ||
+                !m_conn)
             {
                 return E_UNEXPECTED;
             }
