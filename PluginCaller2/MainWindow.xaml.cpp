@@ -15,6 +15,7 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
+using namespace Windows::Web::Http;
 using namespace App2App;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -56,17 +57,96 @@ namespace winrt::PluginCaller2::implementation
         }
 
         // Wait for them all to complete, putting their output in the app view
+        std::wstring results;
         for (auto&& i : calls)
         {
             auto res = co_await i;
+            results.append(L"--");
             for (auto&& [k, v] : res.Result().as<IPropertySet>())
             {
-                printf("Key %ls, value %p", k.c_str(), std::addressof(v));
+                results.append(k).append(L"=").append(std::to_wstring(v.as<IPropertyValue>().GetDouble())).append(L";");
             }
         }
 
         co_await context;
 
-        myButton().Content(box_value(L"Clicked"));
+        DebugOutputText().Text(results);
+    }
+}
+
+
+winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::WindowQuery_Click(winrt::Windows::Foundation::IInspectable const&, winrt::Microsoft::UI::Xaml::RoutedEventArgs const&)
+{
+    auto lifetime{ get_strong() };
+    winrt::apartment_context context;
+    co_await resume_background();
+
+    auto matched = App2AppConnection::GetPackagesWithService(L"desktopinfo");
+    if (matched.empty())
+    {
+        co_await context;
+        DebugOutputText().Text(L"No packages with that service");
+        co_return;
+    }
+
+    auto fam = matched.front().Id().FamilyName();
+    auto conn = App2AppConnection::ConnectHttp(fam, L"desktopinfo");
+    if (!conn)
+    {
+        co_await context;
+        DebugOutputText().Text(std::wstring(L"Package ").append(fam).append(L" did not connect"));
+        co_return;
+    }
+
+    HttpRequestMessage req{ HttpMethod::Get(), Uri{L"x-ms-app2app://something/window"} };
+    auto resp = co_await conn.InvokeAsync(req);
+    if (resp.IsSuccessStatusCode())
+    {
+        auto respBody = co_await resp.Content().ReadAsStringAsync();
+        co_await context;
+        DebugOutputText().Text(respBody);
+    }
+    else
+    {
+        co_await context;
+        DebugOutputText().Text(std::to_wstring(static_cast<uint32_t>(resp.StatusCode())));
+    }
+}
+
+winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::ForegroundInfo_Click(winrt::Windows::Foundation::IInspectable const&, winrt::Microsoft::UI::Xaml::RoutedEventArgs const&)
+{
+    auto lifetime{ get_strong() };
+    winrt::apartment_context context;
+    co_await resume_background();
+
+    auto matched = App2AppConnection::GetPackagesWithService(L"desktopinfo");
+    if (matched.empty())
+    {
+        co_await context;
+        DebugOutputText().Text(L"No packages with that service");
+        co_return;
+    }
+
+    auto fam = matched.front().Id().FamilyName();
+    auto conn = App2AppConnection::ConnectHttp(fam, L"desktopinfo");
+    if (!conn)
+    {
+        co_await context;
+        DebugOutputText().Text(std::wstring(L"Package ").append(fam).append(L" did not connect"));
+        co_return;
+    }
+
+    HttpRequestMessage req{ HttpMethod::Get(), Uri{L"x-ms-app2app:something/window/foreground"} };
+    auto resp = co_await conn.InvokeAsync(req);
+    if (resp.IsSuccessStatusCode())
+    {
+        auto respBody = co_await resp.Content().ReadAsStringAsync();
+        co_await context;
+        DebugOutputText().Text(respBody);
+    }
+    else
+    {
+        co_await context;
+        DebugOutputText().Text(std::to_wstring(static_cast<uint32_t>(resp.StatusCode())));
     }
 }

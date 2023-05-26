@@ -3,7 +3,9 @@
 #include "App2AppConnection.g.cpp"
 
 #include "caller_side_proxy.h"
+#include "caller_side_http_proxy.h"
 #include "app2appconn_adapter.h"
+#include "httpconn_adapter.h"
 #include "connection_dispenser.h"
 
 namespace winrt
@@ -89,32 +91,6 @@ namespace winrt::App2App::implementation
     }
 
     /*
-    * Connects to the first app2app provder with the given name. Note that this is dangerous,
-    * as service _names_ are not unique.  If the connection could not be made, return nullptr.
-    */
-    App2App::IApp2AppConnection App2AppConnection::ConnectToService(hstring const& service)
-    {
-        Package matching{ nullptr };
-
-        auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
-        for (auto&& c : catalog.FindAllAsync().get())
-        {
-            if (service == c.Id())
-            {
-                if (auto cid = FindClassIdInExtension(c.GetExtensionPropertiesAsync().get()))
-                {
-                    if (auto connection = caller_side_proxy::try_connect(*cid))
-                    {
-                        return connection;
-                    }
-                }
-            }
-        }
-
-        return nullptr;
-    }
-
-    /*
     * Connects to a service provided by a specific application. Returns null if the connection
     * cannot be made.
     */
@@ -124,8 +100,30 @@ namespace winrt::App2App::implementation
         return clsid ? caller_side_proxy::try_connect(*clsid) : nullptr;
     }
 
+    /*
+    * Connects to a service provided by a specific application. Returns null if the connection
+    * cannot be made.
+    */
+    winrt::App2App::IApp2AppHttpConnection App2AppConnection::ConnectHttp(hstring const& packageFamilyName, hstring const& service)
+    {
+        auto clsid = FindClassIdForPackageService(packageFamilyName, service);
+        return clsid ? caller_side_http_proxy::try_connect(*clsid) : nullptr;
+    }
+
     std::mutex s_registerLock;
     std::map<winrt::guid, wil::unique_com_class_object_cookie> s_registrations;
+
+    void RegisterDispenser(winrt::guid const& hostId, winrt::com_ptr<IClassFactory> const& factory)
+    {
+        auto lock = std::lock_guard(s_registerLock);
+
+        if (s_registrations.find(hostId) == s_registrations.end())
+        {
+            wil::unique_com_class_object_cookie cookie;
+            winrt::check_hresult(::CoRegisterClassObject(hostId, factory.get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &cookie));
+            s_registrations.emplace(hostId, std::move(cookie));
+        }
+    }
 
     /*
     * Clear the set of registered dispenser objects
@@ -140,18 +138,18 @@ namespace winrt::App2App::implementation
     * Registers an IApp2AppConnection for a specific host ID. The delegate will be invoked when the
     * class ID is CoCreated by a caller process.
     */
-    void App2AppConnection::RegisterHost(winrt::guid const& hostId, RequestConnectionHostDelegate delegate)
+    void App2AppConnection::RegisterHost(winrt::guid const& hostId, App2AppConnectionHostFactory delegate)
     {
-        auto dispenser = winrt::make_self<connection_dispenser<app2appconnection_adapter, RequestConnectionHostDelegate>>(std::move(delegate));
+        RegisterDispenser(hostId, winrt::make_self<connection_dispenser<app2appconnection_adapter, App2AppConnectionHostFactory>>(std::move(delegate)));
+    }
 
-        auto lock = std::lock_guard(s_registerLock);
-
-        if (s_registrations.find(hostId) == s_registrations.end())
-        {
-            wil::unique_com_class_object_cookie cookie;
-            winrt::check_hresult(::CoRegisterClassObject(hostId, dispenser.get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &cookie));
-            s_registrations.emplace(hostId, std::move(cookie));
-        }
+    /*
+    * Registers an IApp2AppConnection for a specific host ID. The delegate will be invoked when the
+    * class ID is CoCreated by a caller process.
+    */
+    void App2AppConnection::RegisterHttpHost(winrt::guid const& hostId, App2AppHttpConnectionHostFactory delegate)
+    {
+        RegisterDispenser(hostId, winrt::make_self<connection_dispenser<httpconn_adapter, App2AppHttpConnectionHostFactory>>(std::move(delegate)));
     }
 
     /*

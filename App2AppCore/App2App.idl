@@ -1,5 +1,6 @@
 import "Windows.Foundation.idl";
 import "Windows.ApplicationModel.idl";
+import "Windows.Web.Http.idl";
 
 namespace App2App
 {
@@ -24,15 +25,23 @@ namespace App2App
 		Windows.Foundation.IAsyncOperation<App2AppCallResult> InvokeAsync(Windows.Foundation.Collections.IPropertySet args);
 	};
 
-	delegate IApp2AppConnection RequestConnectionHostDelegate();
+	interface IApp2AppHttpConnection
+	{
+		Windows.Foundation.IAsyncOperation<Windows.Web.Http.HttpResponseMessage> InvokeAsync(Windows.Web.Http.HttpRequestMessage message);
+	};
+
+	delegate IApp2AppConnection App2AppConnectionHostFactory();
+	delegate IApp2AppHttpConnection App2AppHttpConnectionHostFactory();
 
 	static runtimeclass App2AppConnection
 	{
 		static Windows.ApplicationModel.Package[] GetPackagesWithService(String service);
-		static IApp2AppConnection ConnectToService(String service);
 		static IApp2AppConnection Connect(String packageFamilyName, String service);
+		static IApp2AppHttpConnection ConnectHttp(String packageFamilyName, String service);
 
-		static void RegisterHost(Guid hostId, RequestConnectionHostDelegate factory);
+		static void RegisterHost(Guid hostId, App2AppConnectionHostFactory factory);
+		static void RegisterHttpHost(Guid hostId, App2AppHttpConnectionHostFactory factory);
+
 		static void DeregisterHost(Guid hostId);
 		static void UnregisterAllHosts();
 	}

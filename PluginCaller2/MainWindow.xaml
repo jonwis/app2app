@@ -9,6 +9,9 @@
     mc:Ignorable="d">
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
+        <Button x:Name="GeoButton" Click="myButton_Click">Get Geolocation</Button>
+        <Button x:Name="WindowQuery" Click="WindowQuery_Click">Get Windows</Button>
+        <Button x:Name="ForegroundInfo" Click="ForegroundInfo_Click">Get Foreground</Button>
+        <TextBox x:Name="DebugOutputText"/>
     </StackPanel>
 </Window>

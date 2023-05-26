@@ -9,6 +9,7 @@
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.ApplicationModel.AppExtensions.h>
 #include <winrt/Windows.Management.Deployment.h>
+#include <winrt/Windows.Web.Http.h>
 
 using namespace std::literals;
 

@@ -16,6 +16,8 @@
     <ClCompile Include="App2AppCallResult.cpp" />
     <ClCompile Include="caller_side_proxy.cpp" />
     <ClCompile Include="app2appconn_adapter.cpp" />
+    <ClCompile Include="httpconn_adapter.cpp" />
+    <ClCompile Include="caller_side_http_proxy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -24,6 +26,8 @@
     <ClInclude Include="caller_side_proxy.h" />
     <ClInclude Include="app2appconn_adapter.h" />
     <ClInclude Include="connection_dispenser.h" />
+    <ClInclude Include="httpconn_adapter.h" />
+    <ClInclude Include="caller_side_http_proxy.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App2App.idl" />
