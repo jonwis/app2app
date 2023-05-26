@@ -14,6 +14,52 @@ the system is called a "client" or "caller".
 Layered on top of that is a "web request like" model on both ends, generating a request on one end
 and producing a response on the other.
 
+# How to Experiment
+
+You can build this solution yourself and see how it works.  You'll need VS2022 installed, along with the
+VC++ tools for Windows Desktop development.
+
+1. Build the solution for your favorite architecture
+2. Right-click and "deploy" the `PluginApp1` and `PluginCaller2` projects
+3. Launch `PluginCaller2`
+4. Click the shiny "Click me!" button
+
+The PluginApp1 (the "host") will launch and interact with PluginCaller. Currently, that interaction is
+invisible, but can be observed by debugging PluginCaller2 and its `myButton_OnClick` handler.
+
+# Coming Soon
+
+A short list of "to do" items
+
+**Enumerate available hosts** - Currently, the only supported operation is to identify packages that
+provide an app2app connection. Some apps will want to enumerate them and dig through other configuration
+data about them.
+
+**HttpRequestMessage** - HTTP request/response is a slightly more structured system than `IPropertySet`.
+App2App endpoints that understand HTTP request/response, or have a way to map a request into an HTTP-
+like model of (verb, URI, headers, body) can use that instead.
+
+**Mapping between endpoint types** - If a caller talks PropertySet but the host talks HttpRequestMessage,
+should there be a mapping betweent the two?
+
+**Simplified registration** - Since the manifest has all the registration information in it, a single
+method can register all the types. The connection manager can use "regular" WinRT type activation to
+bring up an object.
+
+**Method-calls** - Some app2app hosts might have a flat DLL with a single call export. Make it easier
+to provide that level of binding.
+
+**Sync or not?** - WinRT API design has moved away from "`-Async` all the things". Does the connection
+pipe have to be async, or should it be synchronous? Apps already know how to deal with blocking background
+calls on their main threads.  Hosts already know how to deal with routing calls from an apartment to
+their main thread.
+
+**GUI debugger** - Upgrade PluginCaller2 to be better; more tools to enumerate then call then visualize
+the bodies of calls; more ability to take parameters to pass along, etc.
+
+**Helpers for hosts** - APIs in App2AppCore that let hosts strongly identify who their callers are,
+along with other systems to ask questions of the caller during the connect phase.
+
 # Layers
 
 ## Registration
