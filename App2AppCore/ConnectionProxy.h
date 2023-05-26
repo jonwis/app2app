@@ -4,7 +4,7 @@
 
 namespace winrt
 {
-    struct connection_proxy : implements<connection_proxy, App2App::IApp2AppConnection>
+    struct caller_side_proxy : implements<caller_side_proxy, App2App::IApp2AppConnection>
     {
         static App2App::IApp2AppConnection try_connect(winrt::guid const& id);
 
@@ -24,7 +24,7 @@ namespace winrt
 
     private:
         winrt::com_ptr<IDispatch> m_connection;
-        DISPID m_mainId;
+        DISPID m_mainId{};
         event<Windows::Foundation::TypedEventHandler<App2App::IApp2AppConnection, Windows::Foundation::IInspectable>> m_closing;
     };
 }

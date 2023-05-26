@@ -9,7 +9,7 @@ namespace winrt
     using namespace Collections;
 
 
-    inline IAsyncOperation<App2App::App2AppCallResult> connection_proxy::InvokeAsync(IPropertySet args)
+    inline IAsyncOperation<App2App::App2AppCallResult> caller_side_proxy::InvokeAsync(IPropertySet args)
     {
         auto cancel = co_await get_cancellation_token();
         cancel.enable_propagation();
@@ -51,18 +51,18 @@ namespace winrt
         }
     }
 
-    inline void connection_proxy::Close()
+    inline void caller_side_proxy::Close()
     {
         m_connection = nullptr;
     }
 
-    App2App::IApp2AppConnection connection_proxy::try_connect(winrt::guid const& id)
+    App2App::IApp2AppConnection caller_side_proxy::try_connect(winrt::guid const& id)
     {
         if (auto conn = winrt::try_create_instance<::IDispatch>(id, CLSCTX_LOCAL_SERVER))
         {
-            auto proxy = winrt::make_self<connection_proxy>();
-            std::array<LPOLESTR, 1> names{L"invoke"};
-            conn->GetIDsOfNames(IID_NULL, names.data(), names.size(), LOCALE_USER_DEFAULT, &proxy->m_mainId);
+            auto proxy = winrt::make_self<caller_side_proxy>();
+            LPOLESTR names[] = { L"invoke" };
+            conn->GetIDsOfNames(IID_NULL, names, _countof(names), LOCALE_USER_DEFAULT, &proxy->m_mainId);
             proxy->m_connection = conn;
             return *proxy;
         }

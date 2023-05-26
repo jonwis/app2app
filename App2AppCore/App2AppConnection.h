@@ -14,9 +14,7 @@ namespace winrt::App2App::implementation
 
         static void RegisterHost(winrt::guid const& hostId, RequestConnectionHostDelegate delegate);
         static void DeregisterHost(winrt::guid const& hostId);
-
-        static std::mutex m_lock;
-        static std::map<winrt::guid, DWORD> m_cookies;
+        static void UnregisterAllHosts();
     };
 }
 namespace winrt::App2App::factory_implementation

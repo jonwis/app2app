@@ -61,77 +61,6 @@ struct MyGeoplugin : winrt::implements<MyGeoplugin, winrt::App2App::IApp2AppConn
     winrt::event<TypedEventHandler<App2App::IApp2AppConnection, IInspectable>> m_closing;
 };
 
-template<typename T> struct ComDispenserType : winrt::implements<ComDispenserType<T>, ::IClassFactory>
-{
-    HRESULT STDMETHODCALLTYPE CreateInstance(::IUnknown* pOuter, REFIID riid, void** ppvObject) noexcept override
-    {
-        if (pOuter)
-        {
-            return CLASS_E_NOAGGREGATION;
-        }
-
-        try
-        {
-            auto t = winrt::make_self<T>();
-            return t->QueryInterface(riid, ppvObject);
-        }
-        catch (winrt::hresult_error const& e)
-        {
-            return e.code();
-        }
-    }
-
-    HRESULT LockServer(BOOL)
-    {
-        return S_OK;
-    }
-};
-
-template<typename T> DWORD register_cotype(winrt::guid const& id)
-{
-    struct ComDispenserType : winrt::implements<ComDispenserType, ::IClassFactory>
-    {
-        HRESULT STDMETHODCALLTYPE CreateInstance(::IUnknown* pOuter, REFIID riid, void** ppvObject) noexcept override
-        {
-            if (pOuter)
-            {
-                return CLASS_E_NOAGGREGATION;
-            }
-
-            try
-            {
-                return winrt::make_self<T>()->QueryInterface(riid, ppvObject);
-            }
-            catch (winrt::hresult_error const& e)
-            {
-                return e.code();
-            }
-            catch (...)
-            {
-                return E_FAIL;
-            }
-        }
-
-        HRESULT LockServer(BOOL)
-        {
-            return S_OK;
-        }
-    };
-
-    DWORD regCookie;
-
-    winrt::check_hresult(::CoRegisterClassObject(id, winrt::make_self<ComDispenserType>().get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &regCookie));
-
-    return regCookie;
-}
-
-DWORD g_regCookie;
-
-void RegisterGeoPlugin()
-{
-    g_regCookie = register_cotype<MyGeoplugin>(winrt::guid{ "d69e1d12-c655-4378-80e1-48a9d649c35a" });
-}
-
 /// <summary>
 /// Initializes the singleton application object.  This is the first line of authored code
 /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -139,7 +68,8 @@ void RegisterGeoPlugin()
 App::App()
 {
     InitializeComponent();
-    RegisterGeoPlugin();
+
+    App2App::App2AppConnection::RegisterHost(winrt::guid{ "d69e1d12-c655-4378-80e1-48a9d649c35a" }, [] { return winrt::make< MyGeoplugin>(); });
 
 #if defined _DEBUG && !defined DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION
     UnhandledException([this](IInspectable const&, UnhandledExceptionEventArgs const& e)
