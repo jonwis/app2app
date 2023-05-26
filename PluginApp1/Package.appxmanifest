@@ -65,35 +65,9 @@
 						</com:ExeServer>
 					</com:ComServer>
 				</com:Extension>
-				<com:Extension Category="windows.comInterface">
-					<com:ComInterface>
-						<com:ProxyStub Id="62f72108-8b59-4f95-8117-ab30bf2a793f" DisplayName="App2AppProxyStub" Path="App2AppCore.dll"/>
-						<com:Interface Id="ca8bb1c3-ed90-422a-90c0-d955ec8cc171" ProxyStubClsid="62f72108-8b59-4f95-8117-ab30bf2a793f"/>
-						<com:Interface Id="5e259ea2-2a57-431f-a343-7ead953c5b34" ProxyStubClsid="62f72108-8b59-4f95-8117-ab30bf2a793f"/>
-						<com:Interface Id="7aa93621-ac79-5878-835b-a5432dd87761" ProxyStubClsid="62f72108-8b59-4f95-8117-ab30bf2a793f"/>
-						<com:Interface Id="88b7a89b-7294-5b16-a5df-89559900b295" ProxyStubClsid="62f72108-8b59-4f95-8117-ab30bf2a793f"/>
-						<com:Interface Id="bcc812d7-2625-5e43-a5da-c1bc8e76143d" ProxyStubClsid="62f72108-8b59-4f95-8117-ab30bf2a793f"/>
-					</com:ComInterface>
-				</com:Extension>
-							   
 			</Extensions>
 		</Application>
 	</Applications>
-
-	<Extensions>
-		<!-- This registers the interfaces for the App2App component IPC -->
-		<ps:Extension Category="windows.activatableClass.proxyStub">
-			<ps:ProxyStub ClassId="62f72108-8b59-4f95-8117-ab30bf2a793f">
-				<Path>App2AppCore.dll</Path>
-				<Interface Name="IApp2AppConnection" InterfaceId="ca8bb1c3-ed90-422a-90c0-d955ec8cc171"/>
-				<Interface Name="IApp2AppCallResult" InterfaceId="5e259ea2-2a57-431f-a343-7ead953c5b34"/>
-				<Interface Name="EventHandler1" InterfaceId="7aa93621-ac79-5878-835b-a5432dd87761"/>
-				<Interface Name="AsyncCompletionHandler" InterfaceId="88b7a89b-7294-5b16-a5df-89559900b295"/>
-				<Interface Name="CompletionHandler2" InterfaceId="bcc812d7-2625-5e43-a5da-c1bc8e76143d"/>
-			</ps:ProxyStub>
-		</ps:Extension>
-	</Extensions>
-
 	<Capabilities>
 		<rescap:Capability Name="runFullTrust" />
 	</Capabilities>

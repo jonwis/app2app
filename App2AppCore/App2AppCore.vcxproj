@@ -171,7 +171,6 @@
     <ClInclude Include="App2AppConnection.h" />
     <ClInclude Include="ConnectionProxy.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="$(OutDir)\app2app_p.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App2AppCallResult.cpp" />
@@ -181,15 +180,6 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
-    <ClCompile Include="$(OutDir)dlldata.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="$(OutDir)App2App_i.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="$(OutDir)App2App_p.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App2App.idl">

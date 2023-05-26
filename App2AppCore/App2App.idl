@@ -10,7 +10,6 @@ namespace App2App
 		Failed
 	};
 
-	[interface_name("IApp2AppCallResult", 5e259ea2-2a57-431f-a343-7ead953c5b34)]
 	runtimeclass App2AppCallResult
 	{
 		App2AppCallResult(App2AppCallResultStatus status, HRESULT error, Object result);
@@ -20,19 +19,20 @@ namespace App2App
 		Object Result{ get; };
 	}
 
-	[uuid(ca8bb1c3-ed90-422a-90c0-d955ec8cc171)]
 	interface IApp2AppConnection
 	{
 		Windows.Foundation.IAsyncOperation<App2AppCallResult> InvokeAsync(Windows.Foundation.Collections.IPropertySet args);
-		void Close();
-
-		event Windows.Foundation.TypedEventHandler<IApp2AppConnection, Object> Closed;
 	};
+
+	delegate Object RequestConnectionHostDelegate();
 
 	static runtimeclass App2AppConnection
 	{
 		static Windows.ApplicationModel.Package[] GetPackagesWithService(String service);
 		static IApp2AppConnection ConnectToService(String service);
 		static IApp2AppConnection Connect(String packageFamilyName, String service);
+
+		static void RegisterHost(Guid hostId, RequestConnectionHostDelegate factory);
+		static void DeregisterHost(Guid hostId);
 	}
 }

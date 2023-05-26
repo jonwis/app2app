@@ -32,29 +32,53 @@ system. An example is below:
                                 Description="anything"
                                 PublicFolder="Public">
                 <uap3:Properties>
+                    <InterfaceFile>something.yaml</InterfaceFile>
                     <Activation>
                         <ClassId>587fc84c-xxxx-xxxx-xxxx-ff693f176f95</ClassId>
                     </Activation>
                 </uap3:Properties>
             </uap3:AppExtension>
         </uap3:Extension>
+	    <com:Extension Category="windows.comServer">
+		    <com:ComServer>
+                <!-- This is the CLSID that matches the above -->
+			    <com:ExeServer Executable="PluginApp1.exe" DisplayName="PluginApp1" Arguments="-App2AppProvider">
+				    <com:Class Id="587fc84c-xxxx-xxxx-xxxx-ff693f176f95"/>
+			    </com:ExeServer>
+		    </com:ComServer>
+	    </com:Extension>
 ```
 
-In this chunk the `/Properties/Activation/ClassId` indicates an out-of-process COM object that
-implements the `IApp2AppConnection` interface. See below for how it connects to activation.
+In this markup:
+
+* `/AppExtension/Properties/Activation/ClassId` indicates an out-of-process COM object that implements the `IDispatch`
+interface.
+* `/AppExtension/@Id` is the "service name" used to identify sub-app plugins. Apps that don't have more than one
+app-to-app entrypoint can just use the id string "any"
+* `/AppExtension/Properties/InterfaceFile` is a file name relative to the extension's public folder containing a
+textual interface definition. General-purpose API mappers might use this information to figure out how to call an
+app2app service.
+
+## Discovery
 
 Discovery uses the `Open` method of [AppExtensionCatalog](https://learn.microsoft.com/en-us/uwp/api/windows.applicationmodel.appextensions.appextensioncatalog?view=winrt-22621)
-to find and connect to a target app.
+to find the mapping package and app2app entry from above. It'll find any registered application.
 
 ## Activation
 
-Packaged apps include an out-of-process COM server to invoke the app. For instance, add the following
-to per the above registration:
+Callers typically use `App2App.App2AppConnection.Connect` to bring up a new App2App connection. The system
+uses the discover mode above to bind a package family name to the CLSID for the server, then calls CoCreateInstance
+on that. The `Connect` method wraps the raw `IDispatch` in a convenience layer, details described below. The
+caller then just calls `InvokeAsync` with a property set and gets a response result object back containing
+another property set.
 
+## Implementing a Host
 
+Host class objects are expected to implement IDispatch. The `IApp2AppConnection` is a convenience wrapper around
+their object.
 
+The `App2AppCore` component provides multiple simplifications that bind `IDispatch` to certain types.
 
-## 
 
 # Appendix / Notes
 

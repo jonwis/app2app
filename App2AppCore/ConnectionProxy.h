@@ -23,7 +23,8 @@ namespace winrt
         }
 
     private:
-        App2App::IApp2AppConnection m_connection;
+        winrt::com_ptr<IDispatch> m_connection;
+        DISPID m_mainId;
         event<Windows::Foundation::TypedEventHandler<App2App::IApp2AppConnection, Windows::Foundation::IInspectable>> m_closing;
     };
 }
