@@ -169,13 +169,16 @@
   <ItemGroup>
     <ClInclude Include="App2AppCallResult.h" />
     <ClInclude Include="App2AppConnection.h" />
-    <ClInclude Include="ConnectionProxy.h" />
+    <ClInclude Include="app2appconn_adapter.h" />
+    <ClInclude Include="caller_side_proxy.h" />
+    <ClInclude Include="connection_dispenser.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App2AppCallResult.cpp" />
     <ClCompile Include="App2AppConnection.cpp" />
-    <ClCompile Include="ConnectionProxy.cpp" />
+    <ClCompile Include="app2appconn_adapter.cpp" />
+    <ClCompile Include="caller_side_proxy.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

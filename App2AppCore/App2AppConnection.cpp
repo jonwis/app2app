@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "App2AppConnection.h"
 #include "App2AppConnection.g.cpp"
-#include "ConnectionProxy.h"
-#include "wil/resource.h"
+
+#include "caller_side_proxy.h"
+#include "app2appconn_adapter.h"
+#include "connection_dispenser.h"
 
 namespace winrt
 {
@@ -15,6 +17,11 @@ namespace winrt
 
 namespace winrt::App2App::implementation
 {
+    /*
+    * The AppExtension/Properties XML markup in a manifest is turned into a series of nested
+    * property bags. Hunt around in there looking for /Activation/ClassId/#text, which
+    * should be a string, and parse that. If no such value is found, return nothing.
+    */
     std::optional<winrt::guid> FindClassIdInExtension(IPropertySet const& props)
     {
         if (auto activation = props.TryLookup(L"Activation").try_as<IPropertySet>())
@@ -34,8 +41,18 @@ namespace winrt::App2App::implementation
         return std::nullopt;
     }
 
-
-    std::optional<winrt::guid> FindClassId(hstring const& packageFamilyName, hstring const& service)
+    /*
+    * Find the app extensions for a package, and then find the app2app extension with a given name.
+    * The package family name is a durable identifier derived from an installed package and thus
+    * unique-ish.
+    * 
+    * Unfortunately there's no way to directly open the extension catalog for a specific package,
+    * so enumerate _all_ the extensions in the catalog and find the one whose identity matches.
+    * Then within there, look for the /AppExtension/Id property that matches the desired service.
+    * 
+    * If none match, return nothing.
+    */
+    std::optional<winrt::guid> FindClassIdForPackageService(hstring const& packageFamilyName, hstring const& service)
     {
         auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
         for (auto&& c : catalog.FindAllAsync().get())
@@ -52,6 +69,11 @@ namespace winrt::App2App::implementation
         return std::nullopt;
     }
 
+    /*
+    * Callers might want to know which packages offer a specific named service. Enumerate the
+    * apps that provide the service and return the array of matching Package objects to the
+    * caller who might want to reason over them more.
+    */
     com_array<Package> App2AppConnection::GetPackagesWithService(hstring const& service)
     {
         std::vector<Package> results;
@@ -66,196 +88,80 @@ namespace winrt::App2App::implementation
         return com_array<Package>(std::move(results));
     }
 
+    /*
+    * Connects to the first app2app provder with the given name. Note that this is dangerous,
+    * as service _names_ are not unique.  If the connection could not be made, return nullptr.
+    */
     App2App::IApp2AppConnection App2AppConnection::ConnectToService(hstring const& service)
     {
         Package matching{ nullptr };
 
         auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
-        std::optional<winrt::guid> foundClass;
         for (auto&& c : catalog.FindAllAsync().get())
         {
             if (service == c.Id())
             {
-                if (foundClass = FindClassIdInExtension(c.GetExtensionPropertiesAsync().get()))
+                if (auto cid = FindClassIdInExtension(c.GetExtensionPropertiesAsync().get()))
                 {
-                    break;
+                    if (auto connection = caller_side_proxy::try_connect(*cid))
+                    {
+                        return connection;
+                    }
                 }
             }
         }
 
-        if (foundClass)
-        {
-            return caller_side_proxy::try_connect(foundClass.value());
-        }
-        else
-        {
-            return nullptr;
-        }
+        return nullptr;
     }
 
+    /*
+    * Connects to a service provided by a specific application. Returns null if the connection
+    * cannot be made.
+    */
     winrt::App2App::IApp2AppConnection App2AppConnection::Connect(hstring const& packageFamilyName, hstring const& service)
     {
-        if (auto clsid = FindClassId(packageFamilyName, service))
-        {
-            return caller_side_proxy::try_connect(clsid.value());
-        }
-        else
-        {
-            return nullptr;
-        }
+        auto clsid = FindClassIdForPackageService(packageFamilyName, service);
+        return clsid ? caller_side_proxy::try_connect(*clsid) : nullptr;
     }
 
-    struct adapt_dispatch : winrt::implements<adapt_dispatch, IDispatch>
-    {
-        HRESULT STDMETHODCALLTYPE GetTypeInfoCount(
-            /* [out] */ __RPC__out UINT* pctinfo) noexcept override
-        {
-            *pctinfo = 0;
-            return E_NOTIMPL;
-        }
-
-        HRESULT STDMETHODCALLTYPE GetTypeInfo(
-            /* [in] */ UINT,
-            /* [in] */ LCID,
-            /* [out] */ __RPC__deref_out_opt ITypeInfo** ppTInfo) noexcept override
-        {
-            *ppTInfo = nullptr;
-            return E_NOTIMPL;
-        }
-
-        HRESULT STDMETHODCALLTYPE GetIDsOfNames(
-            /* [in] */ __RPC__in REFIID riid,
-            /* [size_is][in] */ __RPC__in_ecount_full(cNames) LPOLESTR* rgszNames,
-            /* [range][in] */ __RPC__in_range(0, 16384) UINT cNames,
-            /* [in] */ LCID,
-            /* [size_is][out] */ __RPC__out_ecount_full(cNames) DISPID* rgDispId) noexcept override
-        {
-            if ((riid != IID_NULL) || (cNames != 1) || (L"invoke"sv != rgszNames[0]))
-            {
-                return E_NOTIMPL;
-            }
-
-            rgDispId[0] = 1;
-            return S_OK;
-        }
-
-        HRESULT STDMETHODCALLTYPE Invoke(
-            _In_  DISPID dispIdMember,
-            _In_  REFIID riid,
-            _In_  LCID,
-            _In_  WORD wFlags,
-            _In_  DISPPARAMS* pDispParams,
-            _Out_opt_  VARIANT* pVarResult,
-            _Out_opt_  EXCEPINFO* pExcepInfo,
-            _Out_opt_  UINT* puArgErr) noexcept override
-        {
-            if ((dispIdMember != 1) || (riid != IID_NULL) || (wFlags != DISPATCH_METHOD) ||
-                !pDispParams || (pDispParams->cArgs != 1) || (pDispParams->rgvarg[0].vt != VT_UNKNOWN) ||
-                !pVarResult)
-            {
-                return E_INVALIDARG;
-            }
-
-            wil::assign_to_opt_param(pVarResult, {});
-            wil::assign_to_opt_param(pExcepInfo, {});
-            wil::assign_to_opt_param(puArgErr, {});
-
-            try
-            {
-                winrt::com_ptr<IUnknown> unk;
-                winrt::copy_from_abi(unk, pDispParams->rgvarg[0].punkVal);
-                auto response = m_conn.InvokeAsync(unk.as<IPropertySet>()).get();
-
-                if (response.Status() == App2AppCallResultStatus::Completed)
-                {
-                    pVarResult->vt = VT_UNKNOWN;
-                    winrt::copy_to_abi(response.Result(), reinterpret_cast<void*&>(pVarResult->punkVal));
-                    return S_OK;
-                }
-                else
-                {
-                    return response.ExtendedError();
-                }
-            }
-            catch (winrt::hresult_error const& hr)
-            {
-                return hr.code();
-            }
-            catch (...)
-            {
-                return E_FAIL;
-            }
-        }
-
-        IApp2AppConnection m_conn;
-    };
-
-    struct connection_dispenser : winrt::implements<connection_dispenser, ::IClassFactory>
-    {
-        HRESULT STDMETHODCALLTYPE CreateInstance(::IUnknown* pOuter, REFIID riid, void** ppvObject) noexcept override
-        {
-            if (pOuter)
-            {
-                return CLASS_E_NOAGGREGATION;
-            }
-
-            try
-            {
-                auto adapter = winrt::make_self<adapt_dispatch>();
-                adapter->m_conn = m_delegate();
-                return adapter->QueryInterface(riid, ppvObject);
-            }
-            catch (winrt::hresult_error const& e)
-            {
-                return e.code();
-            }
-        }
-
-        HRESULT LockServer(BOOL)
-        {
-            return S_OK;
-        }
-
-        RequestConnectionHostDelegate m_delegate;
-        DWORD m_cookie{ 0 };
-    };
-
     std::mutex s_registerLock;
-    std::map<winrt::guid, winrt::com_ptr<connection_dispenser>> s_registrations;
+    std::map<winrt::guid, wil::unique_com_class_object_cookie> s_registrations;
 
+    /*
+    * Clear the set of registered dispenser objects
+    */
     void App2AppConnection::UnregisterAllHosts()
     {
         auto lock = std::lock_guard(s_registerLock);
-        for (auto&& [key, val] : s_registrations)
-        {
-            ::CoRevokeClassObject(val->m_cookie);
-        }
         s_registrations.clear();
     }
 
+    /*
+    * Registers an IApp2AppConnection for a specific host ID. The delegate will be invoked when the
+    * class ID is CoCreated by a caller process.
+    */
     void App2AppConnection::RegisterHost(winrt::guid const& hostId, RequestConnectionHostDelegate delegate)
     {
-        auto dispenser = winrt::make_self<connection_dispenser>();
-        dispenser->m_delegate = delegate;
+        auto dispenser = winrt::make_self<connection_dispenser<app2appconnection_adapter, RequestConnectionHostDelegate>>(std::move(delegate));
 
         auto lock = std::lock_guard(s_registerLock);
 
         if (s_registrations.find(hostId) == s_registrations.end())
         {
-            winrt::check_hresult(::CoRegisterClassObject(hostId, dispenser.get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &dispenser->m_cookie));
-            s_registrations.emplace(hostId, std::move(dispenser));
+            wil::unique_com_class_object_cookie cookie;
+            winrt::check_hresult(::CoRegisterClassObject(hostId, dispenser.get(), CLSCTX_LOCAL_SERVER, REGCLS_MULTIPLEUSE, &cookie));
+            s_registrations.emplace(hostId, std::move(cookie));
         }
     }
 
+    /*
+    * Unregisters a host ID, dropping the delegate as well.
+    */
     void App2AppConnection::DeregisterHost(winrt::guid const& hostId)
     {
         // Find the host registered for this class ID. Revoke it from COM and remove it
         // from the map. Removing from the map destroys the delegate as well.
         auto lock = std::lock_guard(s_registerLock);
-        if (auto i = s_registrations.find(hostId); i != s_registrations.end())
-        {
-            ::CoRevokeClassObject(i->second->m_cookie);
-            s_registrations.erase(i);
-        }
+        s_registrations.erase(hostId);
     }
 }

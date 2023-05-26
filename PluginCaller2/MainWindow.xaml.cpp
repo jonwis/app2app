@@ -43,25 +43,22 @@ namespace winrt::PluginCaller2::implementation
         winrt::apartment_context context;
         co_await resume_background();
 
-        std::vector<IApp2AppConnection> conns;
         std::vector<IAsyncOperation<App2AppCallResult>> calls;
 
+        // Find all the packages that provide geolocation services and connect to them, asking each
+        // to provide a response
         for (auto&& p : App2AppConnection::GetPackagesWithService(L"geolocation"))
         {
             if (auto conn = App2AppConnection::Connect(p.Id().FamilyName(), L"geolocation"))
             {
-                conns.emplace_back(std::move(conn));
+                calls.emplace_back(conn.InvokeAsync(PropertySet{}));
             }
         }
 
-        for (auto&& i : conns)
-        {
-            calls.emplace_back(i.InvokeAsync(PropertySet{}));
-        }
-
+        // Wait for them all to complete, putting their output in the app view
         for (auto&& i : calls)
         {
-            auto res = i.get();
+            auto res = co_await i;
             for (auto&& [k, v] : res.Result().as<IPropertySet>())
             {
                 printf("Key %ls, value %p", k.c_str(), std::addressof(v));

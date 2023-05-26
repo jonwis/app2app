@@ -32,7 +32,7 @@ system. An example is below:
                                 Description="anything"
                                 PublicFolder="Public">
                 <uap3:Properties>
-                    <InterfaceFile>something.yaml</InterfaceFile>
+                    <ServiceDefinition>something.yaml</ServiceDefinition>
                     <Activation>
                         <ClassId>587fc84c-xxxx-xxxx-xxxx-ff693f176f95</ClassId>
                     </Activation>
@@ -55,7 +55,7 @@ In this markup:
 interface.
 * `/AppExtension/@Id` is the "service name" used to identify sub-app plugins. Apps that don't have more than one
 app-to-app entrypoint can just use the id string "any"
-* `/AppExtension/Properties/InterfaceFile` is a file name relative to the extension's public folder containing a
+* `/AppExtension/Properties/ServiceDefinition` is a file name relative to the extension's public folder containing a
 textual interface definition. General-purpose API mappers might use this information to figure out how to call an
 app2app service.
 

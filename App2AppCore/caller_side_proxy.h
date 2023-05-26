@@ -12,15 +12,8 @@ namespace winrt
 
         void Close();
 
-        auto Closed(Windows::Foundation::TypedEventHandler<App2App::IApp2AppConnection, Windows::Foundation::IInspectable> const& e)
-        {
-            return m_closing.add(e);
-        }
-
-        auto Closed(event_token const& t)
-        {
-            return m_closing.remove(t);
-        }
+        winrt::event_token Closed(Windows::Foundation::TypedEventHandler<App2App::IApp2AppConnection, Windows::Foundation::IInspectable> const& e);
+        void Closed(event_token const& t);
 
     private:
         winrt::com_ptr<IDispatch> m_connection;

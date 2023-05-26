@@ -14,13 +14,16 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="App2AppConnection.cpp" />
     <ClCompile Include="App2AppCallResult.cpp" />
-    <ClCompile Include="ConnectionProxy.cpp" />
+    <ClCompile Include="caller_side_proxy.cpp" />
+    <ClCompile Include="app2appconn_adapter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="App2AppConnection.h" />
     <ClInclude Include="App2AppCallResult.h" />
-    <ClInclude Include="ConnectionProxy.h" />
+    <ClInclude Include="caller_side_proxy.h" />
+    <ClInclude Include="app2appconn_adapter.h" />
+    <ClInclude Include="connection_dispenser.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App2App.idl" />

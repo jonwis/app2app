@@ -44,6 +44,7 @@
 				<uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
 				<uap:SplashScreen Image="Assets\SplashScreen.png" />
 			</uap:VisualElements>
+            <!-- Declaration of an app2app service here; see /README.md for details -->
 			<Extensions>
 				<uap3:Extension Category="windows.appExtension">
 					<uap3:AppExtension Name="com.microsoft.windows.app2app"
@@ -53,6 +54,7 @@
 										PublicFolder="Public">
 						<uap3:Properties>
 							<Activation>
+                                <!-- The COM server ID goes here. -->
 								<ClassId>d69e1d12-c655-4378-80e1-48a9d649c35a</ClassId>
 							</Activation>
 						</uap3:Properties>
@@ -60,6 +62,7 @@
 				</uap3:Extension>
 				<com:Extension Category="windows.comServer">
 					<com:ComServer>
+                        <!-- The COM server ID from above goes here -->
 						<com:ExeServer Executable="PluginApp1.exe" DisplayName="PluginApp1" Arguments="-App2AppProvider">
 							<com:Class Id="d69e1d12-c655-4378-80e1-48a9d649c35a"/>
 						</com:ExeServer>
