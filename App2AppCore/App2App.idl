@@ -1,0 +1,39 @@
+import "Windows.Foundation.idl";
+import "Windows.ApplicationModel.idl";
+
+namespace App2App
+{
+	enum App2AppCallResultStatus
+	{
+		Completed,
+		TimedOut,
+		Failed
+	};
+
+	runtimeclass App2AppCallResult
+	{
+		App2AppCallResult(App2AppCallResultStatus status, HRESULT error, Object result);
+
+		App2AppCallResultStatus Status{ get; };
+		HRESULT ExtendedError{ get; };
+		Object Result{ get; };
+	}
+
+	interface IApp2AppConnection
+	{
+		Windows.Foundation.IAsyncOperation<App2AppCallResult> InvokeAsync(Windows.Foundation.Collections.IPropertySet args);
+	};
+
+	delegate IApp2AppConnection RequestConnectionHostDelegate();
+
+	static runtimeclass App2AppConnection
+	{
+		static Windows.ApplicationModel.Package[] GetPackagesWithService(String service);
+		static IApp2AppConnection ConnectToService(String service);
+		static IApp2AppConnection Connect(String packageFamilyName, String service);
+
+		static void RegisterHost(Guid hostId, RequestConnectionHostDelegate factory);
+		static void DeregisterHost(Guid hostId);
+		static void UnregisterAllHosts();
+	}
+}
