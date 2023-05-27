@@ -30,7 +30,7 @@ On top of this, the `App2AppCore.dll` provides some semantic sugar:
 
 Note that you don't actually _need_ `app2appcore.dll` - all it provides is a nicer wrapper over the
 `AppExtension` type to identify services, and adapters to make working with `IDispatch` nicer for
-modern code.  The `SimpleAbiCaller` and `SimpleAbiHost` project shows how to do this all-in-one
+modern code.  The `SimpleAbiCaller` and `SimpleNetHostApp` project shows how to do this all-in-one
 without any code from `App2AppCore.dll`.
 
 # How to Experiment
@@ -51,6 +51,16 @@ invisible, but can be observed by debugging PluginCaller2 and its `myButton_OnCl
 > on the project that failed to deploy and modify it. Add a blank line somewhere in the middle of
 > the XML content.  Save and close it, reload the project, then rebuild the solution.
 > Deploy should just work.
+
+## Projects
+
+| Project | Purpose |
+|:--|:--|
+| [App2AppCore](./App2AppCore/App2AppCore.vcxproj) | A WinRT DLL that makes it easy to call into and implement a plugin for either IPropertySet or HTTP-style calls |
+| [PluginApp1](./PluginApp1/PluginApp1.vcxproj) | Provides "geolocation" (property-set) and "desktopinfo" (http style) plugins for use |
+| [PluginCaller2](./PluginCaller2/PluginCaller2.vcxproj) | Simple GUI around invoking geolocation and desktopinfo plugins, showing their results |
+| [SimpleAbiCaller](./SimpleAbiCaller/SimpleAbiCaller.vcxproj) | Command line tool showing a very simple no-appcore-require invocation of the geolocation plugin(s) |
+| [SimpleNetHostApp](./SimpleNetHostApp/SimpleNetHostApp.csproj) | Command line .NET executable providing a plugin |
 
 # Layers
 
