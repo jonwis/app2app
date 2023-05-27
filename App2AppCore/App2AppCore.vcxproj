@@ -173,6 +173,7 @@
     <ClInclude Include="caller_side_http_proxy.h" />
     <ClInclude Include="caller_side_proxy.h" />
     <ClInclude Include="connection_dispenser.h" />
+    <ClInclude Include="dispatch_proxy_base.h" />
     <ClInclude Include="httpconn_adapter.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>

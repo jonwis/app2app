@@ -21,56 +21,18 @@ namespace winrt
         auto cancel = co_await get_cancellation_token();
         cancel.enable_propagation();
 
-        // Populate the args structure with the ABI of the incoming property set. Property sets are
-        // themselves marshalable so anything in there will be carried across in the usual way.
-        VARIANTARG vtTemp{};
-        vtTemp.vt = VT_UNKNOWN;
-        vtTemp.punkVal = reinterpret_cast<::IUnknown*>(winrt::get_abi(args));
-        DISPPARAMS params{};
-        params.cArgs = 1;
-        params.rgvarg = &vtTemp;
+        auto result = CallAndConvert<HttpResponseMessage>(args);
 
-        wil::unique_variant result;
-        UINT argErrorIndex = 0;
-        EXCEPINFO exInfo{};
-
-        HRESULT hr = m_connection->Invoke(m_callHttpIds[0], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
-
-        if (SUCCEEDED_LOG(hr))
+        if (std::holds_alternative<HttpResponseMessage>(result))
         {
-            // After the invoke, convert the one output argument (if present) back to the
-            // IPropertySet tht the caller of _this_ interface expects to see.
-            if (result.vt == VT_UNKNOWN)
-            {
-                co_return to_winrt<HttpResponseMessage>(result.punkVal);
-            }
-            else
-            {
-                HttpResponseMessage resp;
-                resp.StatusCode(HttpStatusCode::InternalServerError);
-                co_return resp;
-            }
+            co_return std::get<HttpResponseMessage>(result);
         }
         else
         {
             HttpResponseMessage resp;
             resp.StatusCode(HttpStatusCode::ServiceUnavailable);
-            resp.Headers().Insert(L"hresult", std::to_wstring(hr));
+            resp.Headers().Insert(L"hresult", std::to_wstring(std::get<winrt::hresult>(result).value));
             co_return resp;
-        }
-    }
-
-    void caller_side_http_proxy::Close()
-    {
-        DISPPARAMS params{};
-        wil::unique_variant result;
-        UINT argErrorIndex = 0;
-        EXCEPINFO exInfo{};
-
-        if (m_connection && (m_closeId != -1))
-        {
-            m_connection->Invoke(m_closeId, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
-            m_connection = nullptr;
         }
     }
 
@@ -80,25 +42,17 @@ namespace winrt
     */
     IApp2AppHttpConnection caller_side_http_proxy::try_connect(winrt::guid const& id)
     {
-        com_ptr<caller_side_http_proxy> result;
-
         if (auto conn = winrt::try_create_instance<::IDispatch>(id, CLSCTX_LOCAL_SERVER))
         {
-            result = winrt::make_self<caller_side_http_proxy>();
-            LPOLESTR callHttpNames[] = { L"callhttp", L"args" };
-            static_assert(_countof(callHttpNames) == _countof(result->m_callHttpIds));
-            if (FAILED_LOG(conn->GetIDsOfNames(IID_NULL, callHttpNames, _countof(callHttpNames), LOCALE_USER_DEFAULT, result->m_callHttpIds)))
-            {
-                return nullptr;
-            }
-
-            LPOLESTR closeNames[] = { L"close" };
-            LOG_IF_FAILED_MSG(conn->GetIDsOfNames(IID_NULL, closeNames, 1, LOCALE_USER_DEFAULT, &result->m_closeId), "No close method on this type");
-
+            auto result = winrt::make_self<caller_side_http_proxy>();
             result->m_connection = std::move(conn);
+            if (result->GetNames({ L"callhttp",L"args" }))
+            {
+                return *result;
+            }
         }
 
-        return *result;
+        return nullptr;
     }
 
 }

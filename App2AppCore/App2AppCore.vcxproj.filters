@@ -28,6 +28,7 @@
     <ClInclude Include="connection_dispenser.h" />
     <ClInclude Include="httpconn_adapter.h" />
     <ClInclude Include="caller_side_http_proxy.h" />
+    <ClInclude Include="dispatch_proxy_base.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App2App.idl" />

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SimpleNetHostApp (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SimpleNetHostApp (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
