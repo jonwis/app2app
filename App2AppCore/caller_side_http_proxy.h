@@ -14,6 +14,7 @@ namespace winrt
 
     private:
         winrt::com_ptr<IDispatch> m_connection;
-        DISPID m_members[2]{};
+        DISPID m_callHttpIds[2]{ -1,-1 };
+        DISPID m_closeId{ -1 };
     };
 }

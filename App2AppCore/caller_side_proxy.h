@@ -17,7 +17,8 @@ namespace winrt
 
     private:
         winrt::com_ptr<IDispatch> m_connection;
-        DISPID m_members[2]{};
+        DISPID m_callIds[2]{ -1,-1 };
+        DISPID m_closeId{ -1 };
         event<Windows::Foundation::TypedEventHandler<App2App::IApp2AppConnection, Windows::Foundation::IInspectable>> m_closing;
     };
 }

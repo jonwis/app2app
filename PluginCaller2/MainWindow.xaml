@@ -12,6 +12,6 @@
         <Button x:Name="GeoButton" Click="myButton_Click">Get Geolocation</Button>
         <Button x:Name="WindowQuery" Click="WindowQuery_Click">Get Windows</Button>
         <Button x:Name="ForegroundInfo" Click="ForegroundInfo_Click">Get Foreground</Button>
-        <TextBox x:Name="DebugOutputText"/>
+        <TextBox x:Name="DebugOutputText" TextWrapping="Wrap" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto" Width="250" MaxHeight="170"/>
     </StackPanel>
 </Window>

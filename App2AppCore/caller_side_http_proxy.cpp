@@ -34,7 +34,7 @@ namespace winrt
         UINT argErrorIndex = 0;
         EXCEPINFO exInfo{};
 
-        HRESULT hr = m_connection->Invoke(m_members[0], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
+        HRESULT hr = m_connection->Invoke(m_callHttpIds[0], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
 
         if (SUCCEEDED_LOG(hr))
         {
@@ -46,7 +46,9 @@ namespace winrt
             }
             else
             {
-                co_return nullptr;
+                HttpResponseMessage resp;
+                resp.StatusCode(HttpStatusCode::InternalServerError);
+                co_return resp;
             }
         }
         else
@@ -65,9 +67,9 @@ namespace winrt
         UINT argErrorIndex = 0;
         EXCEPINFO exInfo{};
 
-        if (m_connection)
+        if (m_connection && (m_closeId != -1))
         {
-            m_connection->Invoke(m_members[1], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
+            m_connection->Invoke(m_closeId, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
             m_connection = nullptr;
         }
     }
@@ -78,19 +80,25 @@ namespace winrt
     */
     IApp2AppHttpConnection caller_side_http_proxy::try_connect(winrt::guid const& id)
     {
+        com_ptr<caller_side_http_proxy> result;
+
         if (auto conn = winrt::try_create_instance<::IDispatch>(id, CLSCTX_LOCAL_SERVER))
         {
-            auto proxy = winrt::make_self<caller_side_http_proxy>();
-            LPOLESTR names[] = { L"invokehttp", L"close" };
-            static_assert(_countof(names) == _countof(proxy->m_members));
-            conn->GetIDsOfNames(IID_NULL, names, _countof(names), LOCALE_USER_DEFAULT, proxy->m_members);
-            proxy->m_connection = conn;
-            return *proxy;
+            result = winrt::make_self<caller_side_http_proxy>();
+            LPOLESTR callHttpNames[] = { L"callhttp", L"args" };
+            static_assert(_countof(callHttpNames) == _countof(result->m_callHttpIds));
+            if (FAILED_LOG(conn->GetIDsOfNames(IID_NULL, callHttpNames, _countof(callHttpNames), LOCALE_USER_DEFAULT, result->m_callHttpIds)))
+            {
+                return nullptr;
+            }
+
+            LPOLESTR closeNames[] = { L"close" };
+            LOG_IF_FAILED_MSG(conn->GetIDsOfNames(IID_NULL, closeNames, 1, LOCALE_USER_DEFAULT, &result->m_closeId), "No close method on this type");
+
+            result->m_connection = std::move(conn);
         }
-        else
-        {
-            return nullptr;
-        }
+
+        return *result;
     }
 
 }

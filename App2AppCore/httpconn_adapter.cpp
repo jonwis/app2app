@@ -21,8 +21,9 @@ IFACEMETHODIMP httpconn_adapter::GetTypeInfo(UINT, LCID, ITypeInfo** ppTInfo) no
     return E_NOTIMPL;
 }
 
-const DISPID did_invokehttp = 1;
-const DISPID did_close = 2;
+const DISPID DISPID_callhttp = 1;
+const DISPID DISPID_args = 2;
+const DISPID DISPID_close = 3;
 
 // There's only one method that matters, "invoke"
 IFACEMETHODIMP httpconn_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID, DISPID* rgDispId) noexcept
@@ -32,20 +33,18 @@ IFACEMETHODIMP httpconn_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames,
         return E_NOTIMPL;
     }
 
-    for (uint32_t i = 0; i < cNames; ++i)
+    if ((cNames == 2) && (L"callhttp"sv == rgszNames[0]) && (L"args"sv == rgszNames[1]))
     {
-        if (L"invokehttp"sv == rgszNames[i])
-        {
-            rgDispId[i] = did_invokehttp;
-        }
-        else if (L"close"sv == rgszNames[i])
-        {
-            rgDispId[i] = did_close;
-        }
-        else
-        {
-            rgDispId[i] = {};
-        }
+        rgDispId[0] = DISPID_callhttp;
+        rgDispId[1] = DISPID_args;
+    }
+    else if ((cNames == 1) && (L"close"sv == rgszNames[0]))
+    {
+        rgDispId[0] = DISPID_close;
+    }
+    else
+    {
+        return DISP_E_UNKNOWNNAME;
     }
 
     return S_OK;
@@ -59,9 +58,7 @@ IFACEMETHODIMP httpconn_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames,
 IFACEMETHODIMP httpconn_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, UINT* puArgErr) noexcept
 {
     // Be strict about what we allow here for now
-    if ((riid != IID_NULL) || (wFlags != DISPATCH_METHOD) ||
-        !pDispParams || (pDispParams->cArgs != 1) || (pDispParams->rgvarg[0].vt != VT_UNKNOWN) ||
-        !pVarResult)
+    if ((riid != IID_NULL) || (wFlags != DISPATCH_METHOD))
     {
         return E_INVALIDARG;
     }
@@ -72,9 +69,13 @@ IFACEMETHODIMP httpconn_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, 
 
     try
     {
-        if (dispIdMember == did_invokehttp)
+        if (dispIdMember == DISPID_callhttp)
         {
-            if (!m_conn)
+            if (!pDispParams || (pDispParams->cArgs != 1))
+            {
+                return E_INVALIDARG;
+            }
+            else if (!m_conn)
             {
                 return E_UNEXPECTED;
             }
@@ -91,13 +92,14 @@ IFACEMETHODIMP httpconn_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, 
             winrt::copy_to_abi(response, reinterpret_cast<void*&>(pVarResult->punkVal));
             return S_OK;
         }
-        else if (dispIdMember == did_close)
+        else if (dispIdMember == DISPID_close)
         {
             if (m_conn)
             {
                 m_conn.Close();
                 m_conn = nullptr;
             }
+
             return S_OK;
         }
         else

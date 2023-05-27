@@ -37,12 +37,12 @@ int main()
 
             auto serviceDispatch = winrt::create_instance<::IDispatch>(guid, CLSCTX_LOCAL_SERVER);
 
-            // Find the name of the "invoke" method and "close" methods
-            WCHAR invokeName[] = L"invoke";
-            WCHAR closeName[] = L"close";
-            LPOLESTR names[] = { invokeName, closeName };
-            DISPID ids[_countof(names)];
-            winrt::check_hresult(serviceDispatch->GetIDsOfNames(IID_NULL, names, _countof(names), LOCALE_USER_DEFAULT, ids));
+            // Find the name of the "call" method
+            WCHAR invokeName[] = L"call";
+            WCHAR argsName[] = L"args";
+            LPOLESTR callNames[] = { invokeName, argsName };
+            DISPID ids[_countof(callNames)]{ -1,-1 };
+            winrt::check_hresult(serviceDispatch->GetIDsOfNames(IID_NULL, callNames, _countof(callNames), LOCALE_USER_DEFAULT, ids));
 
             // This method takes an empty property set, so construct one and send it over
             PropertySet ps{};
@@ -65,8 +65,15 @@ int main()
                 std::wcout << k.c_str() << L" = " << winrt::unbox_value<double>(v) << std::endl;
             }
 
-            params = {};
-            winrt::check_hresult(serviceDispatch->Invoke(ids[1], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, nullptr, nullptr, nullptr));
+            // Close the connection
+            WCHAR closeName[] = L"close";
+            LPOLESTR closeNames[] = { closeName };
+            DISPID closeId{ -1 };
+            if (SUCCEEDED(serviceDispatch->GetIDsOfNames(IID_NULL, closeNames, _countof(closeNames), LOCALE_USER_DEFAULT, &closeId)))
+            {
+                params = {};
+                winrt::check_hresult(serviceDispatch->Invoke(closeId, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, nullptr, nullptr, nullptr));
+            }
         }
     }
 }

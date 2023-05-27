@@ -32,7 +32,7 @@ namespace winrt
         UINT argErrorIndex = 0;
         EXCEPINFO exInfo{};
 
-        HRESULT hr = m_connection->Invoke(m_members[0], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
+        HRESULT hr = m_connection->Invoke(m_callIds[0], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
 
         if (SUCCEEDED_LOG(hr))
         {
@@ -57,11 +57,15 @@ namespace winrt
     {
         if (m_connection)
         {
-            DISPPARAMS params{};
-            wil::unique_variant result;
-            UINT argErrorIndex;
-            EXCEPINFO exInfo{};
-            m_connection->Invoke(m_members[1], IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
+            if (m_closeId == -1)
+            {
+                DISPPARAMS params{};
+                wil::unique_variant result;
+                UINT argErrorIndex;
+                EXCEPINFO exInfo{};
+                m_connection->Invoke(m_closeId, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &params, &result, &exInfo, &argErrorIndex);
+            }
+
             m_connection = nullptr;
         }
     }
@@ -82,19 +86,28 @@ namespace winrt
     */
     App2App::IApp2AppConnection caller_side_proxy::try_connect(winrt::guid const& id)
     {
+        com_ptr<caller_side_proxy> result;
+
         if (auto conn = winrt::try_create_instance<::IDispatch>(id, CLSCTX_LOCAL_SERVER))
         {
-            auto proxy = winrt::make_self<caller_side_proxy>();
-            LPOLESTR names[] = { L"invoke", L"close"};
-            static_assert(_countof(names) == _countof(proxy->m_members));
-            conn->GetIDsOfNames(IID_NULL, names, _countof(names), LOCALE_USER_DEFAULT, proxy->m_members);
-            proxy->m_connection = conn;
-            return *proxy;
+            result = winrt::make_self<caller_side_proxy>();
+            
+            // Find the name of the "call" method, which has one parameter - "args"
+            LPOLESTR callMethodNames[] = { L"call", L"args" };
+            static_assert(_countof(callMethodNames) == _countof(result->m_callIds));
+            if (FAILED_LOG(conn->GetIDsOfNames(IID_NULL, callMethodNames, _countof(callMethodNames), LOCALE_USER_DEFAULT, result->m_callIds)))
+            {
+                return nullptr;
+            }
+
+            // Try finding the name of the "close" method; which if it doesn't exist is fine
+            LPOLESTR closeNames[] = { L"close" };
+            LOG_IF_FAILED_MSG(conn->GetIDsOfNames(IID_NULL, closeNames, 1, LOCALE_USER_DEFAULT, &result->m_closeId), "No close method on this type");
+
+            result->m_connection = std::move(conn);
         }
-        else
-        {
-            return nullptr;
-        }
+
+        return *result;
     }
 
 }

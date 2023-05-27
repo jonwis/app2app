@@ -62,9 +62,21 @@ namespace winrt::PluginCaller2::implementation
         {
             auto res = co_await i;
             results.append(L"--");
-            for (auto&& [k, v] : res.Result().as<IPropertySet>())
+
+            if (res.Status() == App2AppCallResultStatus::Completed)
             {
-                results.append(k).append(L"=").append(std::to_wstring(v.as<IPropertyValue>().GetDouble())).append(L";");
+                for (auto&& [k, v] : res.Result().as<IPropertySet>())
+                {
+                    results.append(k).append(L"=").append(std::to_wstring(v.as<IPropertyValue>().GetDouble())).append(L";");
+                }
+            }
+            else if (res.Status() == App2AppCallResultStatus::Failed)
+            {
+                results.append(L"Failed, error ").append(std::to_wstring(static_cast<uint32_t>(res.ExtendedError())));
+            }
+            else if (res.Status() == App2AppCallResultStatus::TimedOut)
+            {
+                results.append(L"Timed out");
             }
         }
 

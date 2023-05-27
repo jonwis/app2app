@@ -20,31 +20,34 @@ IFACEMETHODIMP app2appconnection_adapter::GetTypeInfo(UINT, LCID, ITypeInfo** pp
     return E_NOTIMPL;
 }
 
-const DISPID did_invoke = 1;
-const DISPID did_close = 2;
+const DISPID DISPID_call = 1;
+const DISPID DISPID_args = 2;
+const DISPID DISPID_close = 3;
 
-// There's only one method that matters, "invoke"
+// There's only one method that matters, "call"
 IFACEMETHODIMP app2appconnection_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* rgszNames, UINT cNames, LCID, DISPID* rgDispId) noexcept
 {
     if (riid != IID_NULL)
     {
         return E_NOTIMPL;
     }
-
-    for (uint32_t i = 0; i < cNames; ++i)
+    else if (cNames < 1)
     {
-        if (L"invoke"sv == rgszNames[i])
-        {
-            rgDispId[i] = did_invoke;
-        }
-        else if (L"close"sv == rgszNames[i])
-        {
-            rgDispId[i] = did_close;
-        }
-        else
-        {
-            rgDispId[i] = {};
-        }
+        return E_INVALIDARG;
+    }
+
+    if ((cNames == 2) && (L"call"sv == rgszNames[0]) && (L"args"sv == rgszNames[1]))
+    {
+        rgDispId[0] = DISPID_call;
+        rgDispId[1] = DISPID_args;
+    }
+    else if ((cNames == 1) && (L"close"sv == rgszNames[0]))
+    {
+        rgDispId[0] = DISPID_close;
+    }
+    else
+    {
+        return DISP_E_UNKNOWNNAME;
     }
 
     return S_OK;
@@ -52,7 +55,7 @@ IFACEMETHODIMP app2appconnection_adapter::GetIDsOfNames(REFIID riid, LPOLESTR* r
 
 /*
 * Adapt an incoming call from IDispatch-variant form to the style desired by IApp2AppConnection. The
-* protocol is that the method being called is "1" ("invoke" from above) and that it has a single
+* protocol is that the method being called is "1" ("call" from above) and that it has a single
 * parameter containing an IPropertySet.
 */
 IFACEMETHODIMP app2appconnection_adapter::Invoke(DISPID dispIdMember, REFIID riid, LCID, WORD wFlags, DISPPARAMS* pDispParams, VARIANT* pVarResult, EXCEPINFO* pExcepInfo, UINT* puArgErr) noexcept
@@ -69,7 +72,7 @@ IFACEMETHODIMP app2appconnection_adapter::Invoke(DISPID dispIdMember, REFIID rii
 
     try
     {
-        if (dispIdMember == did_invoke)
+        if (dispIdMember == DISPID_call)
         {
             if (!pDispParams || (pDispParams->cArgs != 1) || (pDispParams->rgvarg[0].vt != VT_UNKNOWN) ||
                 !pVarResult ||
@@ -97,7 +100,7 @@ IFACEMETHODIMP app2appconnection_adapter::Invoke(DISPID dispIdMember, REFIID rii
                 return response.ExtendedError();
             }
         }
-        else if (dispIdMember == did_close)
+        else if (dispIdMember == DISPID_close)
         {
             if (m_conn)
             {
