@@ -170,6 +170,7 @@
     <ClInclude Include="App2AppCallResult.h" />
     <ClInclude Include="App2AppConnection.h" />
     <ClInclude Include="app2appconn_adapter.h" />
+    <ClInclude Include="App2AppProviderInfo.h" />
     <ClInclude Include="caller_side_http_proxy.h" />
     <ClInclude Include="caller_side_proxy.h" />
     <ClInclude Include="connection_dispenser.h" />
@@ -181,6 +182,7 @@
     <ClCompile Include="App2AppCallResult.cpp" />
     <ClCompile Include="App2AppConnection.cpp" />
     <ClCompile Include="app2appconn_adapter.cpp" />
+    <ClCompile Include="App2AppProviderInfo.cpp" />
     <ClCompile Include="caller_side_http_proxy.cpp" />
     <ClCompile Include="caller_side_proxy.cpp" />
     <ClCompile Include="httpconn_adapter.cpp" />

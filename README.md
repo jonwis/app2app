@@ -80,7 +80,10 @@ system. An example is below:
                                 Description="anything"
                                 PublicFolder="Public">
                 <uap3:Properties>
-                    <ServiceDefinition>something.yaml</ServiceDefinition>
+                    <!-- Describes the interface that the service exposes. Optional. -->
+                    <Interface>something.yaml</Interface>
+                    <!-- Describes the service more completely. Optional. -->
+                    <Description>something.json</Description>
                     <Activation>
                         <ClassId>587fc84c-xxxx-xxxx-xxxx-ff693f176f95</ClassId>
                     </Activation>

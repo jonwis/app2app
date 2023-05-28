@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "App2AppConnection.h"
+#include "App2AppProviderInfo.h"
 #include "App2AppConnection.g.cpp"
 
 #include "caller_side_proxy.h"
@@ -19,12 +20,43 @@ namespace winrt
 
 namespace winrt::App2App::implementation
 {
+    std::vector<AppExtension> GetApp2AppExtensions()
+    {
+        auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
+        auto all = catalog.FindAllAsync().get();
+        // Should be to_vector(all) - see https://github.com/microsoft/wil/issues/328
+        return { begin(all), end(all) };
+    }
+
+    std::vector<AppExtension> FindExtensionsBy(std::optional<hstring> const& packageName, std::optional<hstring> const& service)
+    {
+        std::vector<AppExtension> results;
+
+        for (auto&& e : GetApp2AppExtensions())
+        {
+            auto package = e.Package();
+            if (packageName && (package.Id().FamilyName() != *packageName))
+            {
+                continue;
+            }
+
+            if (service && (e.Id() != *service))
+            {
+                continue;
+            }
+
+            results.emplace_back(std::move(e));
+        }
+
+        return results;
+    }
+
     /*
     * The AppExtension/Properties XML markup in a manifest is turned into a series of nested
     * property bags. Hunt around in there looking for /Activation/ClassId/#text, which
     * should be a string, and parse that. If no such value is found, return nothing.
     */
-    std::optional<winrt::guid> FindClassIdInExtension(IPropertySet const& props)
+    std::optional<winrt::guid> FindClassIdInExtensionProperties(IPropertySet const& props)
     {
         if (auto activation = props.TryLookup(L"Activation").try_as<IPropertySet>())
         {
@@ -56,12 +88,11 @@ namespace winrt::App2App::implementation
     */
     std::optional<winrt::guid> FindClassIdForPackageService(hstring const& packageFamilyName, hstring const& service)
     {
-        auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
-        for (auto&& c : catalog.FindAllAsync().get())
+        for (auto&& c : GetApp2AppExtensions())
         {
             if ((service == c.Id()) && (c.Package().Id().FamilyName() == packageFamilyName))
             {
-                if (auto found = FindClassIdInExtension(c.GetExtensionPropertiesAsync().get()))
+                if (auto found = FindClassIdInExtensionProperties(c.GetExtensionPropertiesAsync().get()))
                 {
                     return found;
                 }
@@ -69,25 +100,6 @@ namespace winrt::App2App::implementation
         }
 
         return std::nullopt;
-    }
-
-    /*
-    * Callers might want to know which packages offer a specific named service. Enumerate the
-    * apps that provide the service and return the array of matching Package objects to the
-    * caller who might want to reason over them more.
-    */
-    com_array<Package> App2AppConnection::GetPackagesWithService(hstring const& service)
-    {
-        std::vector<Package> results;
-        auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
-        for (auto&& c : catalog.FindAllAsync().get())
-        {
-            if (service == c.Id())
-            {
-                results.emplace_back(c.Package());
-            }
-        }
-        return com_array<Package>(std::move(results));
     }
 
     /*
@@ -150,6 +162,30 @@ namespace winrt::App2App::implementation
     void App2AppConnection::RegisterHttpHost(winrt::guid const& hostId, App2AppHttpConnectionHostFactory delegate)
     {
         RegisterDispenser(hostId, winrt::make_self<connection_dispenser<httpconn_adapter, App2AppHttpConnectionHostFactory>>(std::move(delegate)));
+    }
+
+    /*
+    * Returns all the service providers matching this service name
+    */
+    winrt::com_array<App2App::App2AppProviderInfo> App2AppConnection::GetServiceProviders(hstring const& serviceName)
+    {
+        std::vector<App2App::App2AppProviderInfo> results;
+        auto extensions = FindExtensionsBy(std::nullopt, serviceName);
+        std::transform(extensions.begin(), extensions.end(), std::back_inserter(results), [](AppExtension const& e) { return winrt::make<App2AppProviderInfo>(e); });
+        return winrt::com_array(std::move(results));
+    }
+
+    /*
+    * Returns all the services provided by a given package. Note that this _could_ be faster/easier
+    * by finding and parsing the package manifest. This instead enumerates all of them and picks out
+    * the one that matters
+    */
+    winrt::com_array<App2App::App2AppProviderInfo> App2AppConnection::GetPackageServices(hstring const& packageFamily, std::optional<winrt::hstring> const& serviceName)
+    {
+        std::vector<App2App::App2AppProviderInfo> results;
+        auto extensions = FindExtensionsBy(packageFamily, serviceName);
+        std::transform(extensions.begin(), extensions.end(), std::back_inserter(results), [](AppExtension const& e) { return winrt::make<App2AppProviderInfo>(e); });
+        return winrt::com_array(std::move(results));
     }
 
     /*

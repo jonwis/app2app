@@ -8,10 +8,11 @@ namespace winrt::App2App::implementation
     {
         App2AppConnection() = default;
 
+        static winrt::com_array<App2App::App2AppProviderInfo> GetServiceProviders(hstring const& service);
+        static winrt::com_array<App2App::App2AppProviderInfo> GetPackageServices(hstring const& packageFamilyName, std::optional<winrt::hstring> const& serviceName = std::nullopt);
+
         static winrt::App2App::IApp2AppConnection Connect(hstring const& packageFamilyName, hstring const& service);
         static winrt::App2App::IApp2AppHttpConnection ConnectHttp(hstring const& packageFamilyName, hstring const& service);
-
-        static winrt::com_array<winrt::Windows::ApplicationModel::Package> GetPackagesWithService(hstring const& service);
 
         static void RegisterHost(winrt::guid const& hostId, App2AppConnectionHostFactory delegate);
         static void RegisterHttpHost(winrt::guid const& hostId, App2AppHttpConnectionHostFactory delegate);

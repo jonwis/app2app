@@ -7,10 +7,6 @@
 #include "MainWindow.g.cpp"
 #endif
 
-#include <winrt/App2App.h>
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Foundation.Collections.h>
-
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Windows::Foundation;
@@ -48,9 +44,9 @@ namespace winrt::PluginCaller2::implementation
 
         // Find all the packages that provide geolocation services and connect to them, asking each
         // to provide a response
-        for (auto&& p : App2AppConnection::GetPackagesWithService(L"geolocation"))
+        for (auto&& p : App2AppConnection::GetServiceProviders(L"geolocation"))
         {
-            if (auto conn = App2AppConnection::Connect(p.Id().FamilyName(), L"geolocation"))
+            if (auto conn = p.Connect().as<IApp2AppConnection>())
             {
                 calls.emplace_back(conn.InvokeAsync(PropertySet{}));
             }
@@ -86,27 +82,25 @@ namespace winrt::PluginCaller2::implementation
     }
 }
 
-
 winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::WindowQuery_Click(winrt::Windows::Foundation::IInspectable const&, winrt::Microsoft::UI::Xaml::RoutedEventArgs const&)
 {
     auto lifetime{ get_strong() };
-    winrt::apartment_context context;
     co_await resume_background();
 
-    auto matched = App2AppConnection::GetPackagesWithService(L"desktopinfo");
+    auto matched = App2AppConnection::GetServiceProviders(L"desktopinfo");
     if (matched.empty())
     {
-        co_await context;
+        co_await DebugOutputText().Dispatcher();
         DebugOutputText().Text(L"No packages with that service");
         co_return;
     }
 
-    auto fam = matched.front().Id().FamilyName();
-    auto conn = App2AppConnection::ConnectHttp(fam, L"desktopinfo");
+    auto provider = matched.front();
+    auto conn = provider.Connect().try_as<IApp2AppHttpConnection>();
     if (!conn)
     {
-        co_await context;
-        DebugOutputText().Text(std::wstring(L"Package ").append(fam).append(L" did not connect"));
+        co_await DebugOutputText().Dispatcher();
+        DebugOutputText().Text(std::wstring(L"Package ").append(provider.Package().Id().FullName()).append(L" did not connect"));
         co_return;
     }
 
@@ -115,12 +109,12 @@ winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::WindowQ
     if (resp.IsSuccessStatusCode())
     {
         auto respBody = co_await resp.Content().ReadAsStringAsync();
-        co_await context;
+        co_await DebugOutputText().Dispatcher();
         DebugOutputText().Text(respBody);
     }
     else
     {
-        co_await context;
+        co_await DebugOutputText().Dispatcher();
         DebugOutputText().Text(std::to_wstring(static_cast<uint32_t>(resp.StatusCode())));
     }
 }
@@ -128,23 +122,22 @@ winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::WindowQ
 winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::ForegroundInfo_Click(winrt::Windows::Foundation::IInspectable const&, winrt::Microsoft::UI::Xaml::RoutedEventArgs const&)
 {
     auto lifetime{ get_strong() };
-    winrt::apartment_context context;
     co_await resume_background();
 
-    auto matched = App2AppConnection::GetPackagesWithService(L"desktopinfo");
+    auto matched = App2AppConnection::GetServiceProviders(L"desktopinfo");
     if (matched.empty())
     {
-        co_await context;
+        co_await DebugOutputText().Dispatcher();
         DebugOutputText().Text(L"No packages with that service");
         co_return;
     }
 
-    auto fam = matched.front().Id().FamilyName();
-    auto conn = App2AppConnection::ConnectHttp(fam, L"desktopinfo");
+    auto provider = matched.front();
+    auto conn = provider.Connect().try_as<IApp2AppHttpConnection>();
     if (!conn)
     {
-        co_await context;
-        DebugOutputText().Text(std::wstring(L"Package ").append(fam).append(L" did not connect"));
+        co_await DebugOutputText().Dispatcher();
+        DebugOutputText().Text(std::wstring(L"Package ").append(provider.Package().Id().FullName()).append(L" did not connect"));
         co_return;
     }
 
@@ -152,13 +145,13 @@ winrt::fire_and_forget winrt::PluginCaller2::implementation::MainWindow::Foregro
     auto resp = co_await conn.InvokeAsync(req);
     if (resp.IsSuccessStatusCode())
     {
-        auto respBody = co_await resp.Content().ReadAsStringAsync();
-        co_await context;
+        auto respBody = resp.Content().ReadAsStringAsync().get();
+        co_await DebugOutputText().Dispatcher();
         DebugOutputText().Text(respBody);
     }
     else
     {
-        co_await context;
+        co_await DebugOutputText().Dispatcher();
         DebugOutputText().Text(std::to_wstring(static_cast<uint32_t>(resp.StatusCode())));
     }
 }

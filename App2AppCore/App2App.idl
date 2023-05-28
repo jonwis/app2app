@@ -32,12 +32,39 @@ namespace App2App
 		void Close();
 	};
 
+	enum App2AppConnectionStyleKind
+	{
+		PropertySet,
+		HttpMessage,
+		String,
+		CommandLine,
+		StdInOut,
+	};
+
+	runtimeclass App2AppProviderInfo
+	{
+		Windows.ApplicationModel.Package Package { get; };
+		String Service{ get; };
+		Guid ActivationId{ get; };
+		String AppExecAlias{ get; };
+		String DescriptionFilePath{ get; };
+		String InterfaceFilePath{ get; };
+		App2AppConnectionStyleKind ConnectionStyle{ get; };
+
+		Object Connect();
+	}
+
 	delegate IApp2AppConnection App2AppConnectionHostFactory();
 	delegate IApp2AppHttpConnection App2AppHttpConnectionHostFactory();
 
 	static runtimeclass App2AppConnection
 	{
-		static Windows.ApplicationModel.Package[] GetPackagesWithService(String service);
+		static App2AppProviderInfo[] GetServiceProviders(String service);
+		static App2AppProviderInfo[] GetPackageServices(String packageFamilyName);
+
+		[method_name("GetPackageServicesSpecific")]
+		static App2AppProviderInfo[] GetPackageServices(String packageFamilyName, String service);
+
 		static IApp2AppConnection Connect(String packageFamilyName, String service);
 		static IApp2AppHttpConnection ConnectHttp(String packageFamilyName, String service);
 
