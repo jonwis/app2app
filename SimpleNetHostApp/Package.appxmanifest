@@ -6,8 +6,9 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap rescap com uap3">
+  IgnorableNamespaces="uap rescap com uap3 desktop">
 
   <Identity
     Name="ce99e97c-abb4-4ba5-af33-b27ebfce1587"
@@ -49,7 +50,7 @@
                 <uap3:AppExtension Name="com.microsoft.windows.app2app"
                                     Id="geolocation"
                                     DisplayName="Gets current system geolocation"
-                                    Description="Gets current system geolocation"
+                                    Description="Returns the system's current position"
                                     PublicFolder="Public">
                     <uap3:Properties>
                         <Activation>
@@ -67,6 +68,24 @@
                     </com:ExeServer>
                 </com:ComServer>
             </com:Extension>
+            <uap3:Extension Category="windows.appExtension">
+                <uap3:AppExtension Name="com.microsoft.windows.app2app"
+                                    Id="localinfo"
+                                    DisplayName="Contoso LocalInfo"
+                                    Description="Returns some information about the local system"
+                                    PublicFolder="Public">
+                    <uap3:Properties>
+                        <Activation>
+                            <AppExecAlias Executable="SimpleNetHostApp.exe" Arguments="-request"/>
+                        </Activation>
+                    </uap3:Properties>
+                </uap3:AppExtension>
+            </uap3:Extension>
+            <uap3:Extension Category="windows.appExecutionAlias" Executable="SimpleNetHostApp.exe" EntryPoint="Windows.FullTrustApplication">
+                <uap3:AppExecutionAlias>
+                    <desktop:ExecutionAlias Alias="SimpleNetHostApp.exe" />
+                </uap3:AppExecutionAlias>
+            </uap3:Extension>
         </Extensions>
     </Application>
   </Applications>

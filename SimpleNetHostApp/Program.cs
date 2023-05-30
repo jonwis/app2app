@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Storage;
 using Windows.Web.Http;
 
 namespace SimpleNetHostApp
@@ -50,12 +52,68 @@ namespace SimpleNetHostApp
     {
         static void Main(string[] args)
         {
-            // Registers the FakeGeoLocation type with COM on launch.
-            PluginClassFactory<FakeGeolocation>.Register();
+            if ((args.Length == 1) && (args[0] == "-AppToAppProvider"))
+            {
+                // Registers the FakeGeoLocation type with COM on launch.
+                PluginClassFactory<FakeGeolocation>.Register();
 
-            Console.WriteLine("Listening...");
+                Console.WriteLine("Listening...");
 
-            Console.ReadLine();
+                Console.ReadLine();
+            }
+            else if ((args.Length == 1) && (args[0] == "-request"))
+            {
+                RunJsonRequestThing();
+            }
+        }
+
+        static void RunJsonRequestThing()
+        {
+            string line;
+            while ((line = Console.ReadLine()) != null)
+            {
+                try
+                {
+                    var obj = JsonObject.Parse(line);
+                    var command = obj["command"].ToString();
+                    if (command == "time")
+                    {
+                        JsonObject resp = new();
+                        var n = DateTime.UtcNow;
+                        resp["now"] = n;
+                        resp["now_text"] = n.ToString("o");
+                        Console.WriteLine(resp.ToJsonString());
+                    }
+                    else if (command == "environment")
+                    {
+                        JsonObject env = new JsonObject();
+                        foreach (DictionaryEntry e in Environment.GetEnvironmentVariables())
+                        {
+                            env[e.Key.ToString()] = e.Value.ToString();
+                        }
+                        JsonObject resp = new();
+                        resp["environment"] = env;
+                        Console.WriteLine(resp.ToJsonString());
+                    }
+                    else
+                    {
+                        JsonObject err = new();
+                        err["error"] = "unknown command";
+                        err["note"] = command;
+                        JsonObject resp = new();
+                        resp["error"] = err;
+                        Console.WriteLine(resp.ToJsonString());
+                    }
+                }
+                catch (Exception e)
+                {
+                    JsonObject ex = new();
+                    ex["exception"] = e.ToString();
+                    JsonObject resp = new();
+                    resp["error"] = ex;
+                    Console.WriteLine(resp.ToJsonString());
+                }
+            }
         }
     }
 }

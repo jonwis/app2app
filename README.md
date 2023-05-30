@@ -136,6 +136,50 @@ their object.
 
 The `App2AppCore` component provides multiple simplifications that bind `IDispatch` to certain types.
 
+# Simple Command Line Activation
+
+Apps can also provide a simplified single-command-line-style invocation method.
+
+One style uses simple stdin/stdout communication - the caller sends data to the host's stdin, and
+the host processes it.  The host responds by writing to its stdout. The format of the data is not
+specified by this system, but we suggest using UTF-8 encoded strings.  Passing JSON objects back
+and forth is a reasonable model as well.  Communication ends when one side or the other closes their
+end of the write pipe, such as process termination.
+
+For registration purposes, apps still use the AppExtension registration system, but indicate which
+appexecutionalias provides the command-line operation. See [AppExecutionAlias](https://github.com/AdamBraden/AppExecutionAlias)
+for a sample of how to implement.
+
+```xml
+<Application ...>
+    <Extensions>
+        <uap3:Extension Category="windows.appExtension">
+            <uap3:AppExtension Name="com.microsoft.windows.app2app"
+                                Id="muffins"
+                                DisplayName="Generates a list of preferred muffins based on a size"
+                                Description="anything"
+                                PublicFolder="PublicMuffins">
+                <uap3:Properties>
+                    <Activation>
+                        <!-- Points to the application execution alias for this package  -->
+                        <AppAlias Executable="ContosoMuffinMaker.exe" Args="-jsonrequest"/>
+                        <!-- This app expects to use stdin/stdout communication -->
+                        <UseStdInOut/>
+                    </Activation>
+                </uap3:Properties>
+            </uap3:AppExtension>
+        </uap3:Extension>
+        <uap3:Extension Category="windows.appExecutionAlias" Executable="ContosoMuffinMaker.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+            <desktop:ExecutionAlias Alias="ContosoMuffinMaker.exe" />
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
+```
+
+The [SimpleNetHostApp](./SimpleNetHostApp/SimpleNetHostApp.csproj) provides an example host. The host
+displays a prompt to the user in a dialog, then reports the results back in a JSON format. See the
+code in [PluginCaller2](./PluginCaller2/PluginCaller.vcxproj) for the invocation example.
+
 # Coming Soon
 
 A short list of "to do" items
