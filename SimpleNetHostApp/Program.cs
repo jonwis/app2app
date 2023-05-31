@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Windows.Foundation;
@@ -52,6 +53,12 @@ namespace SimpleNetHostApp
     {
         static void Main(string[] args)
         {
+            Debug.WriteLine("What, you egg?");
+            for (int i = 0; i < args.Length; i++)
+            {
+                Debug.WriteLine(args[i]);
+            }
+
             if ((args.Length == 1) && (args[0] == "-AppToAppProvider"))
             {
                 // Registers the FakeGeoLocation type with COM on launch.
@@ -65,13 +72,19 @@ namespace SimpleNetHostApp
             {
                 RunJsonRequestThing();
             }
+            else
+            {
+                Debug.WriteLine("no matches");
+            }
         }
 
         static void RunJsonRequestThing()
         {
             string line;
+            Debug.WriteLine("Reading json");
             while ((line = Console.ReadLine()) != null)
             {
+                Debug.WriteLine("Reading json done, last line was {0}", line);
                 try
                 {
                     var obj = JsonObject.Parse(line);
@@ -114,6 +127,7 @@ namespace SimpleNetHostApp
                     Console.WriteLine(resp.ToJsonString());
                 }
             }
+            Debug.WriteLine("Reading json done, last line was {0}", line);
         }
     }
 }
