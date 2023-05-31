@@ -89,10 +89,6 @@ void get_localinfo(std::wstring const& command)
             // Find the executable path from the app extension information
             auto executable = std::wstring(appExecAlias.Lookup(L"@Executable").as<hstring>());
             auto args = executable + L" " + std::wstring(appExecAlias.TryLookup(L"@Arguments").as<hstring>());
-            /*
-            executable = L"ping.exe";
-            args = L"ping.exe localhost";
-            */
 
             // Construct the json body payload to squirt at stdin
             JsonObject argPayload{};
@@ -100,13 +96,16 @@ void get_localinfo(std::wstring const& command)
             auto argPayloadString = to_string(argPayload.Stringify());
             auto newlineString = to_string(L"\r\n"sv);
 
+            // Windows uses pipes to communicate over stdin/stdout. Create them, marked so they can
+            // be inherited by a child process. Put the "right" half of the pipe into the startup
+            // info for the new process to use.
             const int pipe_read = 0;
             const int pipe_write = 1;
             wil::unique_handle stdIn[2];
             wil::unique_handle stdOut[2];
             SECURITY_ATTRIBUTES sa{};
             sa.nLength = sizeof(sa);
-            sa.bInheritHandle = FALSE;
+            sa.bInheritHandle = TRUE;
             sa.lpSecurityDescriptor = nullptr;
             THROW_IF_WIN32_BOOL_FALSE(::CreatePipe(&stdOut[pipe_read], &stdOut[pipe_write], &sa, 0));
             THROW_IF_WIN32_BOOL_FALSE(::SetHandleInformation(stdOut[pipe_read].get(), HANDLE_FLAG_INHERIT, 0));
@@ -123,7 +122,7 @@ void get_localinfo(std::wstring const& command)
             // only ever inserting and removing null-character markers within its body. The buffer
             // is de-modified before it returns.
             wil::unique_process_information processInfo;
-            THROW_IF_WIN32_BOOL_FALSE(::CreateProcessW(nullptr, const_cast<wchar_t*>(args.c_str()), nullptr, nullptr, TRUE, CREATE_SUSPENDED | CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo, &processInfo));
+            THROW_IF_WIN32_BOOL_FALSE(::CreateProcessW(nullptr, const_cast<wchar_t*>(args.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo, &processInfo));
 
             // Simple mode - write the json string to the 'write' part of stdin, then wait for a
             // response string. A more complicated system is needed for arbitrary payload lengths,
@@ -132,24 +131,34 @@ void get_localinfo(std::wstring const& command)
             DWORD written;
             THROW_IF_WIN32_BOOL_FALSE(WriteFile(stdIn[pipe_write].get(), argPayloadString.data(), argPayloadString.size(), &written, nullptr));
             THROW_IF_WIN32_BOOL_FALSE(WriteFile(stdIn[pipe_write].get(), newlineString.data(), newlineString.size(), &written, nullptr));
-
-            // A fine place to attach to the other process to see what it's doing
-            ResumeThread(processInfo.hThread);
-
-            // Continually read from the 'read' part of stdout until it's drained.
-            std::vector<std::byte> dataChunks;
-            const auto chunk_size = 120;
-            auto buffer = std::make_unique<std::byte[]>(chunk_size);
-            DWORD readBytes;
-            while (ReadFile(stdOut[pipe_read].get(), buffer.get(), 120, &readBytes, nullptr))
-            {
-                dataChunks.insert(dataChunks.end(), buffer.get(), buffer.get() + chunk_size);
-            }
-
-            stdIn[pipe_read].reset();
             stdIn[pipe_write].reset();
+            stdIn[pipe_read].reset();
 
-            // See what that looks like...
+            std::string ss;
+            // Reading from the input buffer needs to be done asynchonrously. I'm sure we could
+            // figure out some overlapped IO here, but for now just spin a thread to pump the
+            // stdout from the other side.
+            auto read_thread = std::thread([&]
+                {
+                    const auto chunk_size = 120;
+                    auto buffer = std::make_unique<char[]>(chunk_size);
+                    DWORD readBytes;
+                    while (ReadFile(stdOut[pipe_read].get(), buffer.get(), 120, &readBytes, nullptr) && (readBytes != 0))
+                    {
+                        ss.insert(ss.end(), buffer.get(), buffer.get() + readBytes);
+                    }
+                });
+
+            // Wait for the other process to terminate, then close all our pipes. This could
+            // get a timeout operation, 
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            stdOut[pipe_write].reset();
+
+            // Wait for the read-thread to terminate due to the pipe breaking
+            read_thread.join();
+            stdOut[pipe_read].reset();
+
+            std::cout << ss << std::endl;
         }
     }
 }
