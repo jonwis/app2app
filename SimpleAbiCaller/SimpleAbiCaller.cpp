@@ -2,17 +2,17 @@
 //
 
 #include <iostream>
-#include <fstream>
 #include <windows.h>
 #include <Unknwn.h>
-#include <io.h>
-#include <fcntl.h>
 #include <string_view>
+#include <wil/cppwinrt.h>
 #include <winrt/Windows.ApplicationModel.AppExtensions.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Data.Json.h>
 #include <wil/resource.h>
+
+#include "process_stdio_pipe.h"
 
 using namespace std::literals;
 using namespace std;
@@ -78,93 +78,6 @@ void get_geolocation()
     }
 }
 
-struct process_string_channel
-{
-    process_string_channel(std::wstring arguments) : m_arguments(std::move(arguments)) {}
-    process_string_channel(std::wstring imageFilePath, std::wstring arguments) : m_imageFilePath(std::move(imageFilePath)), m_arguments(std::move(arguments)) {}
-
-    bool try_start()
-    {
-        // Windows uses pipes to communicate over stdin/stdout. Create them, marked so they can
-        // be inherited by a child process. Put the "right" half of the pipe into the startup
-        // info for the new process to use.
-        SECURITY_ATTRIBUTES sa{};
-        sa.nLength = sizeof(sa);
-        sa.bInheritHandle = TRUE;
-        sa.lpSecurityDescriptor = nullptr;
-        THROW_IF_WIN32_BOOL_FALSE(::CreatePipe(&m_stdOut[pipe_read], &m_stdOut[pipe_write], &sa, 0));
-        THROW_IF_WIN32_BOOL_FALSE(::SetHandleInformation(m_stdOut[pipe_read].get(), HANDLE_FLAG_INHERIT, 0));
-        THROW_IF_WIN32_BOOL_FALSE(::CreatePipe(&m_stdOut[pipe_read], &m_stdOut[pipe_write], &sa, 0));
-        THROW_IF_WIN32_BOOL_FALSE(::SetHandleInformation(m_stdOut[pipe_write].get(), HANDLE_FLAG_INHERIT, 0));
-
-        STARTUPINFOW startupInfo = { sizeof(startupInfo) };
-        startupInfo.hStdError = m_stdOut[pipe_write].get();
-        startupInfo.hStdOutput = m_stdOut[pipe_write].get();
-        startupInfo.hStdInput = m_stdOut[pipe_read].get();
-        startupInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-        // Note the 'dangerous' const cast here; CreateProcess may write to this buffer, but
-        // only ever inserting and removing null-character markers within its body. The buffer
-        // is de-modified before it returns.
-        if (!::CreateProcessW(nullptr, const_cast<wchar_t*>(m_arguments.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo, &processInfo))
-        {
-            m_error = HRESULT_FROM_WIN32(GetLastError());
-            return false;
-        }
-
-        // Start a read/write thread
-        m_inputPumpThread = std::thread([&] { this->read_input_thread(); });
-    }
-
-    bool close()
-    {
-
-    }
-
-    std::ifstream get_stream_from_pipe(wil::unique_handle pipeHandle)
-    {
-        // Create a C++ input stream handled around an Win32 pipe handle. This moves all the "read and
-        // manage buffers" logic into the C++ runtime and out of here. The newly-created FD owns the
-        // lifetime of the handle now.
-        wil::unique_any<int, decltype(&_close), _close> fdCloser;
-        fdCloser.reset(_open_osfhandle(reinterpret_cast<intptr_t>(pipeHandle.get()), _O_RDONLY | _O_U8TEXT));
-        if (fdCloser.get() != -1)
-        {
-            pipeHandle.release();
-        }
-
-        // Now convert the osfhandle into a FILE instance
-        wil::unique_any<FILE*, decltype(&fclose), fclose> fcloser;
-        fcloser.reset(_fdopen(fdCloser.get(), "r"));
-        if (fcloser)
-        {
-            fdCloser.release();
-        }
-
-        // And construct an std::ifstream around _that_
-        std::ifstream result{fcloser.get()};
-
-    }
-
-private:
-
-    void read_input_thread()
-    {
-        const auto chunk_size = 120;
-        std::ifstream;
-        std::basic_filebuf f;
-    }
-
-    winrt::hresult m_error;
-    std::optional<std::wstring> m_imageFilePath;
-    std::wstring m_arguments;
-    const int pipe_read = 0;
-    const int pipe_write = 1;
-    wil::unique_handle m_stdIn[2];
-    wil::unique_handle m_stdOut[2];
-    std::thread m_inputPumpThread;
-    wil::unique_process_information processInfo;
-};
 
 void get_localinfo(std::wstring const& command)
 {
@@ -184,72 +97,22 @@ void get_localinfo(std::wstring const& command)
             // Construct the json body payload to squirt at stdin
             JsonObject argPayload{};
             argPayload.Insert(L"command", JsonValue::CreateStringValue(command));
-            auto argPayloadString = to_string(argPayload.Stringify());
-            auto newlineString = to_string(L"\r\n"sv);
+            auto argPayloadString = winrt::to_string(argPayload.Stringify());
 
-            // Windows uses pipes to communicate over stdin/stdout. Create them, marked so they can
-            // be inherited by a child process. Put the "right" half of the pipe into the startup
-            // info for the new process to use.
-            const int pipe_read = 0;
-            const int pipe_write = 1;
-            wil::unique_handle stdIn[2];
-            wil::unique_handle stdOut[2];
-            SECURITY_ATTRIBUTES sa{};
-            sa.nLength = sizeof(sa);
-            sa.bInheritHandle = TRUE;
-            sa.lpSecurityDescriptor = nullptr;
-            THROW_IF_WIN32_BOOL_FALSE(::CreatePipe(&stdOut[pipe_read], &stdOut[pipe_write], &sa, 0));
-            THROW_IF_WIN32_BOOL_FALSE(::SetHandleInformation(stdOut[pipe_read].get(), HANDLE_FLAG_INHERIT, 0));
-            THROW_IF_WIN32_BOOL_FALSE(::CreatePipe(&stdIn[pipe_read], &stdIn[pipe_write], &sa, 0));
-            THROW_IF_WIN32_BOOL_FALSE(::SetHandleInformation(stdIn[pipe_write].get(), HANDLE_FLAG_INHERIT, 0));
-
-            STARTUPINFOW startupInfo = { sizeof(startupInfo) };
-            startupInfo.hStdError = stdOut[pipe_write].get();
-            startupInfo.hStdOutput = stdOut[pipe_write].get();
-            startupInfo.hStdInput = stdIn[pipe_read].get();
-            startupInfo.dwFlags |= STARTF_USESTDHANDLES;
-
-            // Note the 'dangerous' const cast here; CreateProcess may write to this buffer, but
-            // only ever inserting and removing null-character markers within its body. The buffer
-            // is de-modified before it returns.
-            wil::unique_process_information processInfo;
-            THROW_IF_WIN32_BOOL_FALSE(::CreateProcessW(nullptr, const_cast<wchar_t*>(args.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo, &processInfo));
-
-            // Simple mode - write the json string to the 'write' part of stdin, then wait for a
-            // response string. A more complicated system is needed for arbitrary payload lengths,
-            // as Windows pipes have a default buffer size. As this is a one-shot API, close the
-            // pipe after the write is done so the caller sees EOF and terminates.
-            DWORD written;
-            THROW_IF_WIN32_BOOL_FALSE(WriteFile(stdIn[pipe_write].get(), argPayloadString.data(), argPayloadString.size(), &written, nullptr));
-            THROW_IF_WIN32_BOOL_FALSE(WriteFile(stdIn[pipe_write].get(), newlineString.data(), newlineString.size(), &written, nullptr));
-            stdIn[pipe_write].reset();
-            stdIn[pipe_read].reset();
-
-            std::string ss;
-            // Reading from the input buffer needs to be done asynchonrously. I'm sure we could
-            // figure out some overlapped IO here, but for now just spin a thread to pump the
-            // stdout from the other side.
-            auto read_thread = std::thread([&]
-                {
-                    const auto chunk_size = 120;
-                    auto buffer = std::make_unique<char[]>(chunk_size);
-                    DWORD readBytes;
-                    while (ReadFile(stdOut[pipe_read].get(), buffer.get(), 120, &readBytes, nullptr) && (readBytes != 0))
-                    {
-                        ss.insert(ss.end(), buffer.get(), buffer.get() + readBytes);
-                    }
-                });
-
-            // Wait for the other process to terminate, then close all our pipes. This could
-            // get a timeout operation, 
-            WaitForSingleObject(processInfo.hProcess, INFINITE);
-            stdOut[pipe_write].reset();
-
-            // Wait for the read-thread to terminate due to the pipe breaking
-            read_thread.join();
-            stdOut[pipe_read].reset();
-
-            std::cout << ss << std::endl;
+            // Send it over
+            auto response = launch_and_get_one_response({}, args, argPayloadString);
+            if (std::holds_alternative<std::string>(response))
+            {
+                std::cout << std::get<std::string>(response) << std::endl;
+            }
+            else if (std::holds_alternative<winrt::hresult>(response))
+            {
+                std::cout << "Error in call " << std::hex << std::get<winrt::hresult>(response) << std::endl;
+            }
+            else
+            {
+                std::cout << "No response" << std::endl;
+            }
         }
     }
 }
@@ -273,3 +136,4 @@ int wmain(int argc, wchar_t const* const* argv)
         get_localinfo(argv[2]);
     }
 }
+
