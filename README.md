@@ -35,8 +35,14 @@ without any code from `App2AppCore.dll`.
 
 # How to Experiment
 
-You can build this solution yourself and see how it works.  You'll need VS2022 installed, along with the
-VC++ tools for Windows Desktop development.
+You can build this solution yourself and see how it works.
+
+## Pre-requisites
+- VS2022 installed
+- VC++ tools for Windows Desktop development
+- Universal Windows Platform development
+
+## How to use
 
 1. Build the solution for your favorite architecture
 2. Right-click and "deploy" the `PluginApp1` and `PluginCaller2` projects
