@@ -80,6 +80,7 @@ void get_geolocation()
 }
 
 
+
 void get_localinfo(std::wstring const& command)
 {
     auto catalog = AppExtensionCatalog::Open(L"com.microsoft.windows.app2app");
@@ -109,7 +110,18 @@ void get_localinfo(std::wstring const& command)
             auto response = launch_and_get_one_response(exePath, processArgs, argPayloadString);
             if (std::holds_alternative<std::string>(response))
             {
-                std::cout << std::get<std::string>(response) << std::endl;
+                auto const& responseString = std::get<std::string>(response);
+                JsonObject returned{ nullptr };
+                if (JsonObject::TryParse(winrt::to_hstring(responseString), returned))
+                {
+                    // Normally the caller here would know what the response body means, parse it,
+                    // and interpret the result. We're just a wrapper caller, so print it.
+                    std::cout << "Response : " << responseString << std::endl;
+                }
+                else
+                {
+                    std::cout << "Could not parse response " << responseString << std::endl;
+                }
             }
             else if (std::holds_alternative<winrt::hresult>(response))
             {

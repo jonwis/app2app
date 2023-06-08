@@ -11,6 +11,14 @@
 
 using namespace std::literals;
 
+// This type helps launch a child process on Windows while providing access to its stdin/stdout.
+// Once started, the process will continue to run until stopped or the object is destroyed. Derive
+// from this type and override the notify_line(std::string_view) method to hear content from the
+// child process. The stdout content from the child is expected to be UTF-8 encoded text, and
+// derived types are notified on each newline-delimited output string.
+//
+// A future enhancement to produce std::istream/std::ostream wrappers (from which you can then
+// produce std::istringstream/std::ostringstream) is welcome.
 struct process_string_channel
 {
     bool try_start(std::wstring arguments)
@@ -18,7 +26,13 @@ struct process_string_channel
         return try_start(std::nullopt, std::move(arguments));
     }
 
-    bool try_start(std::optional<std::wstring> imageFilePath, std::wstring arguments)
+    // Launch the program with a list of arguments, like "foo.exe -bar". If the specific path of
+    // the executable is known, pass it in @imageFilePath. Otherwise, CreateProcess has a standard
+    // way of mapping the @arguments string to a target path.
+    //
+    // The method returns a success winrt::hresult if the process could be launched, or the Win32
+    // error produced by CreateProcess if it wasn't.
+    winrt::hresult try_start(std::optional<std::wstring> imageFilePath, std::wstring arguments)
     {
         // Windows uses pipes to communicate over stdin/stdout. Create them, marked so they can
         // be inherited by a child process. Put the "right" half of the pipe into the startup
@@ -42,20 +56,20 @@ struct process_string_channel
         // only ever inserting and removing null-character markers within its body. The buffer
         // is de-modified before it returns.
         wchar_t const* filePath = imageFilePath ? imageFilePath.value().c_str() : nullptr;
-        if (!::CreateProcessW(filePath, const_cast<wchar_t*>(arguments.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo, &m_processInfo))
+        winrt::hresult launchResult;
+        if (::CreateProcessW(filePath, const_cast<wchar_t*>(arguments.c_str()), nullptr, nullptr, TRUE, CREATE_NO_WINDOW | CREATE_SUSPENDED, nullptr, nullptr, &startupInfo, &m_processInfo))
         {
-            m_error = HRESULT_FROM_WIN32(GetLastError());
-            return false;
+            // Start pumping messages. Note that the event _might_ be raised before this try_start returns.
+            // A future improvement could buffer this until the app pulls/polls from the read buffer.
+            m_inputPumpThread = std::thread([&] { this->read_input_thread(); });
+            ResumeThread(m_processInfo.hThread);
+        }
+        else
+        {
+            launchResult = HRESULT_FROM_WIN32(::GetLastError());
         }
 
-        // Start a read/write thread
-        m_inputPumpThread = std::thread([&] { this->read_input_thread(); });
-        return true;
-    }
-
-    winrt::hresult error() const
-    {
-        return this->m_error;
+        return launchResult;
     }
 
     void close(bool waitForProcessEnd = false)
@@ -92,7 +106,8 @@ struct process_string_channel
 
     // Override this if you want a callback as lines are produced byt the reader. Note that the
     // callbacks happen from an std::thread that's not yours. You will need to deal with handing
-    // back the responses appropriately.
+    // back the responses appropriately. The data in the std::string_view is UTF-8 encoded; convert
+    // it 
     virtual void notify_line(std::string_view nextLine) {}
 
 private:
@@ -138,7 +153,6 @@ private:
         }
     }
 
-    winrt::hresult m_error;
     const int pipe_read = 0;
     const int pipe_write = 1;
     wil::unique_handle m_stdIn[2];
@@ -171,6 +185,7 @@ private:
     std::optional<std::string> m_pending;
 };
 
+// Launch a Win32 
 inline std::variant<std::monostate, std::string, winrt::hresult> launch_and_get_one_response(
     std::optional<std::wstring> imagePath,
     std::wstring arguments,
@@ -178,7 +193,8 @@ inline std::variant<std::monostate, std::string, winrt::hresult> launch_and_get_
 {
     send_recv_process childProcess;
     std::optional<std::string> response;
-    if (childProcess.try_start(std::move(imagePath), std::move(arguments)))
+    winrt::hresult resultCode = childProcess.try_start(std::move(imagePath), std::move(arguments));
+    if (resultCode == S_OK)
     {
         auto response = childProcess.send_one(toSend);
         childProcess.close();
@@ -193,6 +209,6 @@ inline std::variant<std::monostate, std::string, winrt::hresult> launch_and_get_
     }
     else
     {
-        return childProcess.error();
+        return resultCode;
     }
 }

@@ -140,15 +140,17 @@ The `App2AppCore` component provides multiple simplifications that bind `IDispat
 
 Apps can also provide a simplified single-command-line-style invocation method.
 
-One style uses simple stdin/stdout communication - the caller sends data to the host's stdin, and
-the host processes it.  The host responds by writing to its stdout. The format of the data is not
-specified by this system, but we suggest using UTF-8 encoded strings.  Passing JSON objects back
-and forth is a reasonable model as well.  Communication ends when one side or the other closes their
-end of the write pipe, such as process termination.
-
 For registration purposes, apps still use the AppExtension registration system, but indicate which
 appexecutionalias provides the command-line operation. See [AppExecutionAlias](https://github.com/AdamBraden/AppExecutionAlias)
-for a sample of how to implement.
+for information, or the SimpleNetHostApp project here for a working sample.
+
+One style uses simple stdin/stdout communication - the caller sends data to the host's stdin and
+the host processes it.  The host responds by writing to its stdout. The demo project expects to
+exchange data on stdin/stdout via UTF-8 encoded JSON objects, with \r\n delimination between
+command requests. JSON allows newlines in string values, but they must be encoded like "foo\r\nbar"
+with the literal byte characters `f o o \ r \ n b a r`. JSON _allows_ newlines in "interstitial"
+whitespace (like pretty-printing in an editor) - be sure your JSON-to-text conversion tool
+eliminates those.
 
 ```xml
 <Application ...>
@@ -162,7 +164,7 @@ for a sample of how to implement.
                 <uap3:Properties>
                     <Activation>
                         <!-- Points to the application execution alias for this package  -->
-                        <AppAlias Executable="ContosoMuffinMaker.exe" Args="-jsonrequest"/>
+                        <AppAlias Executable="ContosoMuffinMaker.exe" Arguments="-jsonrequest"/>
                         <!-- This app expects to use stdin/stdout communication -->
                         <UseStdInOut/>
                     </Activation>
