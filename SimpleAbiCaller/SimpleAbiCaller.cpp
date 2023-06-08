@@ -2,6 +2,7 @@
 //
 
 #include <iostream>
+#include <filesystem>
 #include <windows.h>
 #include <Unknwn.h>
 #include <string_view>
@@ -90,9 +91,14 @@ void get_localinfo(std::wstring const& command)
                 .Lookup(L"Activation").as<IPropertySet>()
                 .Lookup(L"AppExecAlias").as<IPropertySet>();
 
-            // Find the executable path from the app extension information
-            auto executable = std::wstring(appExecAlias.Lookup(L"@Executable").as<hstring>());
-            auto args = executable + L" " + std::wstring(appExecAlias.TryLookup(L"@Arguments").as<hstring>());
+            // Form the filesystem path to the executable
+            auto exeAttribute = appExecAlias.Lookup(L"@Executable").as<hstring>();
+            auto exePath = std::filesystem::path(static_cast<std::wstring_view>(c.Package().InstalledPath())) /
+                static_cast<std::wstring_view>(exeAttribute);
+
+            // Form the process' arguments list
+            auto argsAttribute = appExecAlias.Lookup(L"@Arguments").as<hstring>();
+            auto processArgs = std::wstring(exeAttribute + L" " + argsAttribute);
 
             // Construct the json body payload to squirt at stdin
             JsonObject argPayload{};
@@ -100,7 +106,7 @@ void get_localinfo(std::wstring const& command)
             auto argPayloadString = winrt::to_string(argPayload.Stringify());
 
             // Send it over
-            auto response = launch_and_get_one_response({}, args, argPayloadString);
+            auto response = launch_and_get_one_response(exePath, processArgs, argPayloadString);
             if (std::holds_alternative<std::string>(response))
             {
                 std::cout << std::get<std::string>(response) << std::endl;
