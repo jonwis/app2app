@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json.Nodes;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -70,6 +71,10 @@ namespace SimpleNetHostApp
 
         static void RunJsonRequestThing()
         {
+            // App2app console IO is UTF-8 encoded
+            Console.InputEncoding = Encoding.UTF8;
+            Console.OutputEncoding = Encoding.UTF8;
+
             string line;
             while ((line = Console.ReadLine()) != null)
             {
@@ -87,7 +92,7 @@ namespace SimpleNetHostApp
                     }
                     else if (command == "environment")
                     {
-                        JsonObject env = new JsonObject();
+                        JsonObject env = new();
                         foreach (DictionaryEntry e in Environment.GetEnvironmentVariables())
                         {
                             env[e.Key.ToString()] = e.Value.ToString();
