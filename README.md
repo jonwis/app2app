@@ -1,28 +1,32 @@
 # App2App Communication
 
 This solution shows a basic app-to-app communication protocol similar to the system used in the
-[https://learn.microsoft.com/en-us/uwp/api/Windows.ApplicationModel.AppService.AppServiceConnection?view=winrt-22621](AppServices) system.
-Specifically, there is:
+[https://learn.microsoft.com/en-us/uwp/api/Windows.ApplicationModel.AppService.AppServiceConnection?view=winrt-22621](AppServices).
+The goal is to start with a very simple "data exchange pipe" and build up from there, showing
+ways in which packaged apps can find then communicate easily with each other.
 
-* A registry of apps by name and by "service"
+The core components are:
+
+* A registry of "services" by identity and category
 * A way for apps to register themselves as "hosts"
 * A way for apps to invoke "hosts" over a long-running connection
 
-In this system, the app implementing the system is called a "host" or "service". The app invoking
-the system is called a "client" or "caller".
-
-Layered on top of that is a "web request like" model on both ends, generating a request on one end
-and producing a response on the other.
+In this system, the app implementing the system is called a "handler" or "plugin" or "service".
+The app invoking a handler is a "client" or "caller".
 
 # Components
 
 This system is built in three parts:
 
 * Discovery of plugins via AppExtension in packaged manifests
-* Activation of plugins via COM's `CoCreate` and cross-process mechanisms
-* Invocation of plugin via IDispatch with a single parameter in and single parameter out
+* Activation of plugins via CreateProcess or COM out-of-process `CoCreateInstance`
+* Invocation of plugin via stdin/stdout JSON payload exchange or calling a method on an `IDispatch` object
 
 On top of this, the `App2AppCore.dll` provides some semantic sugar:
+
+* Helpers to discover apps that provide services, their identity, and their preferred interaction model
+* Adapters to activate and interact with services
+* Helpers for services to register and be activated 
 
 * An `IApp2AppConnection` channel that sends/recieves a `IPropertySet` asynchronously
 * An `IApp2AppHttpConnection` channel that sends `Windows.Web.Http.HttpRequestMessage`
@@ -38,6 +42,7 @@ without any code from `App2AppCore.dll`.
 You can build this solution yourself and see how it works.
 
 ## Pre-requisites
+
 - VS2022 installed
 - VC++ tools for Windows Desktop development
 - Universal Windows Platform development
@@ -71,6 +76,11 @@ invisible, but can be observed by debugging PluginCaller2 and its `myButton_OnCl
 # Layers
 
 ## Registration
+
+App2App 
+
+`AppExtension` is a generic app-writeable/app-readable part of a packaged app's manifest declarations.
+It supports a open
 
 Initially, apps register as COM objects using an `AppExtension`.  That is, packaged win32 apps add
 markup to their manifest based on the [windows.appExtension](https://learn.microsoft.com/en-us/windows/uwp/launch-resume/how-to-create-an-extension)
