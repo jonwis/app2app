@@ -4,6 +4,9 @@ import "Windows.Web.Http.idl";
 
 namespace App2App
 {
+	[contractversion(1.0)] apicontract App2AppContract{}
+
+	[contract(App2AppContract, 1)]
 	enum App2AppCallResultStatus
 	{
 		Completed,
@@ -11,6 +14,7 @@ namespace App2App
 		Failed
 	};
 
+	[contract(App2AppContract, 1)]
 	runtimeclass App2AppCallResult
 	{
 		App2AppCallResult(App2AppCallResultStatus status, HRESULT error, Object result);
@@ -20,21 +24,27 @@ namespace App2App
 		Object Result{ get; };
 	}
 
+	[contract(App2AppContract, 1)]
 	interface IApp2AppConnection
 	{
 		Windows.Foundation.IAsyncOperation<App2AppCallResult> InvokeAsync(Windows.Foundation.Collections.IPropertySet args);
 		void Close();
 	};
 
+	[contract(App2AppContract, 1)]
 	interface IApp2AppHttpConnection
 	{
 		Windows.Foundation.IAsyncOperation<Windows.Web.Http.HttpResponseMessage> InvokeAsync(Windows.Web.Http.HttpRequestMessage message);
 		void Close();
 	};
 
+	[contract(App2AppContract, 1)]
 	delegate IApp2AppConnection App2AppConnectionHostFactory();
+
+	[contract(App2AppContract, 1)]
 	delegate IApp2AppHttpConnection App2AppHttpConnectionHostFactory();
 
+	[contract(App2AppContract, 1)]
 	static runtimeclass App2AppConnection
 	{
 		static Windows.ApplicationModel.Package[] GetPackagesWithService(String service);
